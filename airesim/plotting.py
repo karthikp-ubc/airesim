@@ -195,3 +195,84 @@ def print_sensitivity_table(rows: list[dict]) -> None:
             f"{r['param_name']:<35} {r['min_mean']:>10.1f} {r['max_mean']:>10.1f} "
             f"{r['range']:>10.1f} {r['impact']:>8}"
         )
+
+
+def plot_tornado_chart(
+    rows: list[dict],
+    baseline: float,
+    title: str = "Sensitivity Tornado Chart",
+    xlabel: str = "Total Training Time (Hours)",
+    save_path: str | None = None,
+    max_params: int = 15,
+):
+    """Horizontal tornado chart ranking parameters by their impact on a metric.
+
+    Each bar spans from the minimum to the maximum mean value observed across
+    the swept range for that parameter, centered on the chart.  Parameters are
+    sorted so the highest-impact one appears at the top.
+
+    Args:
+        rows: List of dicts from ``sensitivity_summary()``.
+        baseline: Baseline metric value (drawn as a vertical reference line).
+        title: Chart title.
+        xlabel: X-axis label.
+        save_path: If provided, save the figure to this path.
+        max_params: Show at most this many parameters (top by range).
+    """
+    import matplotlib.pyplot as plt
+    import matplotlib.patches as mpatches
+
+    # Keep top-N by range; draw highest-impact at the top of the chart.
+    display = sorted(rows, key=lambda r: r["range"], reverse=True)[:max_params]
+    display_bottom_to_top = list(reversed(display))   # reversed so y=0 is bottom
+
+    impact_colors = {
+        "high":   "#C44E52",
+        "medium": "#DD8452",
+        "low":    "#4C72B0",
+        "none":   "#AAAAAA",
+    }
+
+    fig_height = max(4, len(display) * 0.55 + 1.5)
+    fig, ax = plt.subplots(figsize=(11, fig_height))
+
+    for y, row in enumerate(display_bottom_to_top):
+        color = impact_colors.get(row["impact"], "#4C72B0")
+        bar_left  = row["min_mean"]
+        bar_width = row["max_mean"] - row["min_mean"]
+        ax.barh(y, bar_width, left=bar_left, height=0.6,
+                color=color, edgecolor="black", linewidth=0.7, alpha=0.85)
+        # Annotate the delta to the right of the bar
+        ax.text(row["max_mean"] + 0.3, y, f"  Δ{row['range']:.1f}h",
+                va="center", fontsize=8, color="#333333")
+
+    # Baseline reference line
+    ax.axvline(baseline, color="black", linestyle="--", linewidth=1.5)
+
+    param_labels = [r["param_name"] for r in display_bottom_to_top]
+    ax.set_yticks(range(len(display)))
+    ax.set_yticklabels(param_labels, fontsize=9)
+    ax.set_xlabel(xlabel)
+    ax.set_title(title)
+
+    # Legend
+    impact_order = [("high", "High impact"), ("medium", "Medium impact"),
+                    ("low", "Low impact")]
+    legend_handles = [
+        mpatches.Patch(color=impact_colors[k], label=lbl)
+        for k, lbl in impact_order
+    ]
+    legend_handles.append(
+        plt.Line2D([0], [0], color="black", linestyle="--", linewidth=1.5,
+                   label="Baseline")
+    )
+    ax.legend(handles=legend_handles, loc="lower right", fontsize=8)
+    ax.grid(axis="x", alpha=0.3)
+
+    plt.tight_layout()
+    if save_path:
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
+        print(f"  Saved plot to {save_path}")
+    else:
+        plt.show()
+    plt.close()

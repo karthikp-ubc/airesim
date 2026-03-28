@@ -87,7 +87,12 @@ class Simulator:
         pool_mgr.init_pools(all_servers, p.working_pool_size, p.spare_pool_size)
 
         # ── Create components ────────────────────────────────────────────
-        coordinator = Coordinator(env, stats, rng)
+        coordinator = Coordinator(
+            env, stats, rng,
+            failure_distribution=p.failure_distribution,
+            weibull_shape=p.weibull_shape,
+            lognormal_sigma=p.lognormal_sigma,
+        )
         scheduler = Scheduler(
             env=env,
             rng=rng,

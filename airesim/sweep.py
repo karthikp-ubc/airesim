@@ -42,7 +42,7 @@ class SweepResult:
             tt = agg.training_time_summary()
             fc = agg.failure_count_summary()
             print(
-                f"  {agg.param_label}={agg.param_value:<10}  "
+                f"  {agg.param_label}={str(agg.param_value):<20}  "
                 f"training_time={tt.get('mean', 0):8.1f}±{tt.get('stdev', 0):5.1f} hrs  "
                 f"failures={fc.get('mean', 0):6.1f}±{fc.get('stdev', 0):4.1f}",
                 file=out,

@@ -45,6 +45,11 @@ class Params:
     auto_repair_fail_prob: float = 0.40  # P(auto repair says success but didn't fix)
     manual_repair_fail_prob: float = 0.20  # P(manual repair says success but didn't fix)
 
+    # ── Failure-time distribution ────────────────────────────────────────────
+    failure_distribution: str = 'exponential'  # 'exponential' | 'weibull' | 'lognormal'
+    weibull_shape: float = 1.0    # Weibull k; k=1 → exponential, k>1 → wear-out
+    lognormal_sigma: float = 1.0  # lognormal σ (std-dev of the log); smaller → less spread
+
     # ── Diagnosis ────────────────────────────────────────────────────────────
     diagnosis_uncertainty: float = 0.0  # P(wrong server identified as cause)
 
@@ -83,6 +88,16 @@ class Params:
             raise ValueError("prob_auto_to_manual must be in [0, 1]")
         if not 0 <= self.diagnosis_uncertainty <= 1:
             raise ValueError("diagnosis_uncertainty must be in [0, 1]")
+        _valid_dists = ('exponential', 'weibull', 'lognormal')
+        if self.failure_distribution not in _valid_dists:
+            raise ValueError(
+                f"failure_distribution must be one of {_valid_dists}, "
+                f"got {self.failure_distribution!r}"
+            )
+        if self.weibull_shape <= 0:
+            raise ValueError("weibull_shape must be > 0")
+        if self.lognormal_sigma <= 0:
+            raise ValueError("lognormal_sigma must be > 0")
 
     def with_overrides(self, **kwargs) -> "Params":
         """Return a new Params with selected fields overridden."""
