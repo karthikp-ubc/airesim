@@ -80,11 +80,11 @@ def test_repaired_server_added_to_warm_standbys():
     observed = {}
 
     class InspectingSim(Simulator):
-        def _main_loop(self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats):
+        def _main_loop(self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers):
             observed["scheduler"] = scheduler
             observed["repair_shop"] = repair_shop
             yield from super()._main_loop(
-                env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats
+                env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers
             )
 
     p = Params(
@@ -193,7 +193,7 @@ def test_misdiagnosis_real_failed_server_state_is_idle():
     captured = {}
 
     class InspectingSim(Simulator):
-        def _main_loop(self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats):
+        def _main_loop(self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers):
             remaining = p.job_length
             scheduler.do_host_selection()
             yield env.timeout(p.host_selection_time)
