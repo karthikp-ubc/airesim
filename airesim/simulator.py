@@ -214,11 +214,19 @@ class Simulator:
                 stats.total_compute_time += compute_duration
 
                 if failed_server is None:
-                    # Job completed without failure
+                    # Job completed without failure — credit all active servers
+                    for s in scheduler.active_servers:
+                        self.removal_policy.on_success(s, compute_duration)
                     break
 
                 if remaining_job_time <= 0:
                     break
+
+                # Credit servers that ran successfully this chunk (all except
+                # the failed one, which gets penalised after blame resolution).
+                for s in scheduler.active_servers:
+                    if s is not failed_server:
+                        self.removal_policy.on_success(s, compute_duration)
 
                 # ── Handle failure ───────────────────────────────────────
                 # Apply diagnosis uncertainty — might blame wrong server
@@ -242,6 +250,7 @@ class Simulator:
                 # remove_from_working is idempotent, so the misdiagnosis case
                 # (server already removed above) is safe.
                 pool_mgr.remove_from_working(failed_server)
+                self.removal_policy.on_failure(failed_server)
                 repair_shop.submit(failed_server)
 
                 # Recovery time (loading checkpoint)
