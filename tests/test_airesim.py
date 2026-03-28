@@ -427,6 +427,80 @@ def test_one_way_sweep():
     print(f"  [PASS] test_one_way_sweep (means={[f'{m:.1f}' for m in means]})")
 
 
+# ── Failure-distribution tests ───────────────────────────────────────────────
+
+def test_failure_distributions():
+    """All three failure distributions should produce a complete simulation run."""
+    base = Params(
+        job_size=8,
+        warm_standbys=2,
+        working_pool_size=12,
+        spare_pool_size=4,
+        job_length=30 * 24 * 60,
+        random_failure_rate=0.01 / (24 * 60),
+        systematic_failure_rate_multiplier=5.0,
+        systematic_failure_fraction=0.15,
+        recovery_time=20,
+        host_selection_time=3,
+        seed=42,
+    )
+
+    results = {}
+    for dist in ('exponential', 'weibull', 'lognormal'):
+        p = base.with_overrides(failure_distribution=dist)
+        stats = Simulator(p).run()
+        assert stats.total_training_time > 0, \
+            f"{dist}: total_training_time should be > 0"
+        assert stats.total_training_time >= p.job_length, \
+            f"{dist}: total_training_time should be >= job_length"
+        results[dist] = stats
+
+    print("  [PASS] test_failure_distributions")
+    for dist, s in results.items():
+        print(f"    {dist:12s}: time={s.training_time_hours:.1f}hrs, "
+              f"failures={s.total_failures}")
+
+
+def test_failure_distribution_validation():
+    """Invalid failure_distribution should raise ValueError."""
+    try:
+        Params(failure_distribution='poisson').validate()
+        assert False, "Should have raised ValueError"
+    except ValueError:
+        pass
+    print("  [PASS] test_failure_distribution_validation")
+
+
+def test_weibull_shape_1_matches_exponential_mean():
+    """Weibull with k=1 has the same mean as exponential — failure counts
+    should be in the same ballpark over many replications."""
+    base = Params(
+        job_size=4, warm_standbys=1, working_pool_size=7, spare_pool_size=2,
+        job_length=30 * 24 * 60,
+        random_failure_rate=0.01 / (24 * 60),
+        systematic_failure_rate_multiplier=0.0,
+        systematic_failure_fraction=0.0,
+        recovery_time=0, host_selection_time=0, seed=1,
+    )
+    failures = {}
+    for dist in ('exponential', 'weibull'):
+        total = sum(
+            Simulator(base.with_overrides(failure_distribution=dist, weibull_shape=1.0,
+                                          seed=i)).run().total_failures
+            for i in range(20)
+        )
+        failures[dist] = total / 20
+
+    # With k=1, Weibull is exponential — means should agree within 50 %
+    ratio = failures['weibull'] / max(failures['exponential'], 1)
+    assert 0.5 < ratio < 2.0, (
+        f"Weibull(k=1) mean failures ({failures['weibull']:.1f}) should be "
+        f"close to exponential ({failures['exponential']:.1f}), ratio={ratio:.2f}"
+    )
+    print(f"  [PASS] test_weibull_shape_1_matches_exponential_mean "
+          f"(exp={failures['exponential']:.1f}, weibull={failures['weibull']:.1f})")
+
+
 # ── Runner ───────────────────────────────────────────────────────────────────
 
 def main():
@@ -452,6 +526,9 @@ def main():
         test_threshold_removal,
         test_aggregate_stats,
         test_one_way_sweep,
+        test_failure_distributions,
+        test_failure_distribution_validation,
+        test_weibull_shape_1_matches_exponential_mean,
     ]
 
     passed = 0
