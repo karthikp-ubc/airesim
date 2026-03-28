@@ -14,6 +14,13 @@ pip install simpy
 python -m airesim.run examples/paper_table1_sweep.py
 ```
 
+## Running the Tests
+
+```bash
+python3 tests/test_airesim.py      # core tests (20 cases)
+python3 tests/test_edge_cases.py   # edge-case / bug-regression tests (5 cases)
+```
+
 ## Architecture
 
 ```
