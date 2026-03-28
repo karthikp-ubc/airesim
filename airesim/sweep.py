@@ -95,6 +95,19 @@ class OneWaySweep:
         self.removal_policy = removal_policy
 
     def run(self, verbose: bool = True) -> SweepResult:
+        """Execute the sweep and return aggregated results.
+
+        For each value in ``self.values``, runs ``num_replications`` independent
+        simulations with seeds ``base_params.seed + 0 … base_params.seed + N-1``
+        and collects an ``AggregateStats`` object.
+
+        Args:
+            verbose: If True, print progress (parameter value and mean training time)
+                     to stdout as each configuration completes.
+
+        Returns:
+            A ``SweepResult`` containing one ``AggregateStats`` per swept value.
+        """
         result = SweepResult(
             sweep_name=f"OneWay({self.param_name})",
             param_name=self.param_name,
@@ -159,6 +172,18 @@ class TwoWaySweep:
         self.removal_policy = removal_policy
 
     def run(self, verbose: bool = True) -> SweepResult:
+        """Execute the Cartesian-product sweep and return aggregated results.
+
+        Iterates over all ``(param1_value, param2_value)`` combinations in row-major
+        order, running ``num_replications`` independent simulations per cell.
+
+        Args:
+            verbose: If True, print progress for each (param1, param2) pair to stdout.
+
+        Returns:
+            A ``SweepResult`` where each entry's ``param_value`` is a
+            ``(param1_val, param2_val)`` tuple.
+        """
         result = SweepResult(
             sweep_name=f"TwoWay({self.param1_name}, {self.param2_name})",
             param_name=self.param1_name,

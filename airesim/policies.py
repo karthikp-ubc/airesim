@@ -40,6 +40,7 @@ class DefaultHostSelection(HostSelectionPolicy):
     """Select servers randomly (uniform) from the available pool."""
 
     def select(self, available_servers, job_size, warm_standbys, rng):
+        """Shuffle the available pool and return the first ``job_size + warm_standbys`` servers."""
         needed = job_size + warm_standbys
         chosen = available_servers[:needed]  # pool is already shuffled or ordered
         rng.shuffle(chosen)
@@ -50,6 +51,7 @@ class FewestFailuresFirst(HostSelectionPolicy):
     """Prefer servers with the fewest historical failures."""
 
     def select(self, available_servers, job_size, warm_standbys, rng):
+        """Sort by ascending total failure count (random tiebreak) and return the top servers."""
         needed = job_size + warm_standbys
         # Sort by failure count ascending, break ties randomly
         sorted_servers = sorted(available_servers, key=lambda s: (s.total_failure_count, rng.random()))
@@ -75,6 +77,7 @@ class DefaultRepairEscalation(RepairEscalationPolicy):
         self.prob_escalate = prob_escalate
 
     def should_escalate(self, server, auto_repair_succeeded, rng):
+        """Return True with probability ``prob_escalate`` when auto repair failed."""
         if auto_repair_succeeded:
             return False
         return rng.random() < self.prob_escalate
@@ -95,6 +98,7 @@ class NeverRemove(ServerRemovalPolicy):
     """Never permanently remove servers (always reintegrate after repair)."""
 
     def should_remove(self, server, rng):
+        """Always return False — every repaired server is returned to the working pool."""
         return False
 
 
@@ -106,5 +110,6 @@ class ThresholdRemoval(ServerRemovalPolicy):
         self.window_minutes = window_minutes
 
     def should_remove(self, server, rng):
+        """Return True if the server has reached ``max_failures`` within the rolling window."""
         recent = server.failures_in_window(self.window_minutes)
         return recent >= self.max_failures

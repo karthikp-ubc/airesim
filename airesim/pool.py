@@ -90,6 +90,7 @@ class PoolManager:
         self.retired.append(server)
 
     def __repr__(self):
+        """Return a concise string showing pool sizes."""
         return (
             f"PoolManager(working={len(self.working_pool)}, "
             f"spare={len(self.spare_pool)}, "

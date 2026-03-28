@@ -195,6 +195,14 @@ def run_sweep(
 # ── Argument parser ───────────────────────────────────────────────────────────
 
 def build_parser() -> argparse.ArgumentParser:
+    """Build and return the argument parser for the AIReSim CLI.
+
+    Defines three mutually exclusive modes:
+    - No arguments: run the built-in demo sweep.
+    - Positional ``SCRIPT``: load and execute a user-provided Python sweep script.
+    - ``--sweep`` / ``--values``: run a one-way CLI sweep with optional ``--params``
+      and ``--output`` flags.
+    """
     parser = argparse.ArgumentParser(
         prog="python -m airesim.run",
         description="AIReSim CLI — simulate AI cluster reliability.",
@@ -250,6 +258,13 @@ def build_parser() -> argparse.ArgumentParser:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    """Parse CLI arguments and dispatch to the appropriate run mode.
+
+    Validates mutual-exclusion constraints (``SCRIPT`` XOR ``--sweep``, and
+    ``--values`` requires ``--sweep``), loads base ``Params`` from a file if
+    ``--params`` is given, then delegates to ``run_demo``, ``run_script``, or
+    ``run_sweep``.
+    """
     parser = build_parser()
     args = parser.parse_args()
 

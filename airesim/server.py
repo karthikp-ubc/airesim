@@ -69,18 +69,23 @@ class Server:
     # ── State transitions ────────────────────────────────────────────────
 
     def mark_running(self) -> None:
+        """Transition server to RUNNING state (actively executing the AI job)."""
         self.state = ServerState.RUNNING
 
     def mark_failed(self) -> None:
+        """Transition server to FAILED state, awaiting submission to the repair shop."""
         self.state = ServerState.FAILED
 
     def mark_idle(self) -> None:
+        """Transition server to IDLE state (available for assignment in the pool)."""
         self.state = ServerState.IDLE
 
     def begin_auto_repair(self) -> None:
+        """Transition server to AUTO_REPAIR state (undergoing automated repair)."""
         self.state = ServerState.AUTO_REPAIR
 
     def begin_manual_repair(self) -> None:
+        """Transition server to MANUAL_REPAIR state (undergoing human-in-the-loop repair)."""
         self.state = ServerState.MANUAL_REPAIR
 
     def complete_repair(self, success: bool) -> None:
@@ -90,12 +95,15 @@ class Server:
         self.state = ServerState.IDLE
 
     def retire(self) -> None:
+        """Permanently retire the server; it will no longer be used in the cluster."""
         self.state = ServerState.RETIRED
 
     def move_to_spare(self) -> None:
+        """Move server to the spare pool (runs background work, not the AI job)."""
         self.state = ServerState.SPARE
 
     def return_from_spare(self) -> None:
+        """Return server from spare pool to IDLE in the working pool."""
         self.state = ServerState.IDLE
 
     def make_bad(self) -> None:
@@ -110,4 +118,5 @@ class Server:
         return sum(1 for t in self.failure_timestamps if t >= cutoff)
 
     def __repr__(self):
+        """Return a concise string representation showing id, bad-server flag, and state."""
         return f"Server({self.server_id}, bad={self.is_bad}, state={self.state.value})"

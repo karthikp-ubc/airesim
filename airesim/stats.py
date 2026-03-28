@@ -55,6 +55,7 @@ class StatsCollector:
         return self.total_training_time / 60.0
 
     def record_failure(self, is_systematic: bool) -> None:
+        """Increment failure counters; distinguish random vs. systematic failures."""
         self.total_failures += 1
         if is_systematic:
             self.systematic_failures += 1
@@ -62,9 +63,11 @@ class StatsCollector:
             self.random_failures += 1
 
     def record_run_duration(self, duration: float) -> None:
+        """Append a run-segment duration (time between consecutive failures) in minutes."""
         self.run_durations.append(duration)
 
     def summary_dict(self) -> dict:
+        """Return a flat dict of all key metrics suitable for logging or CSV export."""
         return {
             "total_training_time_hrs": round(self.training_time_hours, 2),
             "total_failures": self.total_failures,
@@ -110,10 +113,12 @@ class AggregateStats:
         }
 
     def training_time_summary(self) -> dict:
+        """Return mean/stdev/percentile stats for total training time (hours) across replications."""
         times = [r.training_time_hours for r in self.raw_results]
         return self._summarize(times)
 
     def failure_count_summary(self) -> dict:
+        """Return mean/stdev/percentile stats for total failure count across replications."""
         return self._summarize(self._extract("total_failures"))
 
     def summary_table(self) -> dict:
@@ -128,6 +133,7 @@ class AggregateStats:
         }
 
     def __repr__(self):
+        """Return a concise string showing parameter value and mean ± stdev training time."""
         tt = self.training_time_summary()
         return (
             f"AggregateStats({self.param_label}={self.param_value}, "
