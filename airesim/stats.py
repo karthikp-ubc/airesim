@@ -44,6 +44,10 @@ class StatsCollector:
     # Number of host selections
     host_selection_count: int = 0
 
+    # Set to True when the job was aborted because server retirements
+    # permanently reduced the cluster below the minimum required size.
+    cluster_depleted: bool = False
+
     @property
     def avg_run_duration(self) -> float:
         if not self.run_durations:
@@ -120,6 +124,17 @@ class AggregateStats:
     def failure_count_summary(self) -> dict:
         """Return mean/stdev/percentile stats for total failure count across replications."""
         return self._summarize(self._extract("total_failures"))
+
+    def retired_count_summary(self) -> dict:
+        """Return mean/stdev/percentile stats for servers_retired across replications."""
+        return self._summarize(self._extract("servers_retired"))
+
+    @property
+    def depleted_fraction(self) -> float:
+        """Fraction of replications that ended in cluster depletion."""
+        if not self.raw_results:
+            return 0.0
+        return sum(1 for r in self.raw_results if r.cluster_depleted) / len(self.raw_results)
 
     def summary_table(self) -> dict:
         """Return a dict with summaries for all key metrics."""

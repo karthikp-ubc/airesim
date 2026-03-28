@@ -121,7 +121,7 @@ class Simulator:
         repair_shop.on_server_returned = scheduler.return_server_to_job
 
         # ── Start the main simulation process ────────────────────────────
-        env.process(self._main_loop(env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats))
+        env.process(self._main_loop(env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers))
 
         # Optionally: bad-server regeneration process
         if p.bad_server_regeneration:
@@ -143,6 +143,7 @@ class Simulator:
         repair_shop: RepairShop,
         pool_mgr: PoolManager,
         stats: StatsCollector,
+        all_servers: list[Server],
     ):
         """Main simulation loop implementing the paper's Figure 1 flowchart."""
         remaining_job_time = p.job_length
@@ -167,6 +168,19 @@ class Simulator:
                         # already-fired event.  We own the event lifecycle and
                         # reset it here after waking (fix for bug c).
                         stats.job_stall_count += 1
+
+                        # Depletion guard: if server retirements have permanently
+                        # reduced the total non-retired pool below the minimum
+                        # needed, no amount of waiting will unblock the job.
+                        total_active = sum(
+                            1 for s in all_servers
+                            if s.state != ServerState.RETIRED
+                        )
+                        if total_active < p.total_servers_needed:
+                            stats.cluster_depleted = True
+                            stats.total_training_time = env.now
+                            return  # exit the SimPy generator
+
                         if not repair_shop.server_repaired_event.triggered:
                             yield repair_shop.server_repaired_event
                         repair_shop.server_repaired_event = env.event()
