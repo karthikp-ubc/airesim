@@ -111,6 +111,9 @@ class Simulator:
             pool_manager=pool_mgr,
             stats=stats,
         )
+        # Wire the repair shop to the scheduler so repaired servers are
+        # offered back as warm standbys mid-job (fix for bug a).
+        repair_shop.on_server_returned = scheduler.return_server_to_job
 
         # ── Start the main simulation process ────────────────────────────
         env.process(self._main_loop(env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats))
@@ -151,9 +154,17 @@ class Simulator:
                         stats.total_wait_time += p.preemption_wait_time
                         moved = pool_mgr.move_spare_to_working()
                     else:
-                        # No spares — stall and wait for repair
+                        # No spares — stall and wait for repair.
+                        # Check triggered before yielding to avoid the missed-
+                        # signal race: if a repair completed while the main
+                        # loop was running (not suspended), server_repaired_event
+                        # is already triggered and we must not wait on the
+                        # already-fired event.  We own the event lifecycle and
+                        # reset it here after waking (fix for bug c).
                         stats.job_stall_count += 1
-                        yield repair_shop.server_repaired_event
+                        if not repair_shop.server_repaired_event.triggered:
+                            yield repair_shop.server_repaired_event
+                        repair_shop.server_repaired_event = env.event()
                         # Re-check availability after a server returns
                         continue
 
@@ -197,15 +208,20 @@ class Simulator:
                     innocents = [s for s in scheduler.active_servers if s is not failed_server]
                     if innocents:
                         misdiagnosed = rng.choice(innocents)
-                        # The misdiagnosed server gets sent to repair instead
+                        # The misdiagnosed server gets sent to repair instead.
+                        # Mark it failed and remove it from the pool, then rebind
+                        # failed_server so the unconditional submit below handles it.
+                        # Do NOT call repair_shop.submit() here — the block below
+                        # does the single authoritative submit (fix for bug b-i).
                         misdiagnosed.mark_failed()
                         pool_mgr.remove_from_working(misdiagnosed)
-                        repair_shop.submit(misdiagnosed)
-                        # The actual bad server stays in the pool (oops)
+                        # The actual bad server stays running (oops — misdiagnosis)
                         failed_server.state = ServerState.IDLE
                         failed_server = misdiagnosed
 
-                # Send failed server to repair
+                # Send the blamed server (real or misdiagnosed) to repair.
+                # remove_from_working is idempotent, so the misdiagnosis case
+                # (server already removed above) is safe.
                 pool_mgr.remove_from_working(failed_server)
                 repair_shop.submit(failed_server)
 

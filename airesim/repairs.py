@@ -66,8 +66,14 @@ class RepairShop:
         self.pool_manager = pool_manager
         self.stats = stats
 
-        # Event signaled whenever a server completes repair and is available
+        # Event signaled whenever a server completes repair and is available.
+        # The main loop resets this event after waking — see simulator._main_loop.
         self.server_repaired_event: simpy.Event = env.event()
+
+        # Optional callback invoked after a server is returned to the working
+        # pool.  Set by the Simulator to wire repaired servers back into the
+        # scheduler's warm-standby list mid-job.
+        self.on_server_returned = None
 
     def submit(self, server: Server) -> simpy.Process:
         """Submit a server to the repair pipeline. Returns the SimPy process."""
@@ -116,6 +122,9 @@ class RepairShop:
         else:
             # Return to working pool
             self.pool_manager.return_to_working(server)
+            # Notify the scheduler so it can re-add the server as a warm standby
+            if self.on_server_returned is not None:
+                self.on_server_returned(server)
             # Signal that a server is available
             self._signal_repaired()
 
@@ -128,8 +137,12 @@ class RepairShop:
         )
 
     def _signal_repaired(self):
-        """Fire the server_repaired event and reset it for the next waiter."""
+        """Fire the server_repaired event.
+
+        The event is NOT replaced here.  The main loop owns the event
+        lifecycle: it checks ``triggered`` before yielding and creates a
+        fresh event after waking.  This prevents the missed-signal race
+        where the event is replaced before a new waiter can grab it.
+        """
         if not self.server_repaired_event.triggered:
             self.server_repaired_event.succeed()
-        # Create a fresh event for future waiters
-        self.server_repaired_event = self.env.event()
