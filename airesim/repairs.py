@@ -119,6 +119,12 @@ class RepairShop:
         if self.removal_policy.should_remove(server, self.rng):
             self.pool_manager.retire_server(server)
             self.stats.servers_retired += 1
+            # Wake the main loop so it can re-check the depletion guard.
+            # Without this, when every repaired server is retired the
+            # server_repaired_event never fires and the stall loop waits
+            # forever, leaving total_training_time = 0 and env.run() to
+            # exit silently once no further events remain.
+            self._signal_repaired()
         else:
             # Return to working pool
             self.pool_manager.return_to_working(server)
