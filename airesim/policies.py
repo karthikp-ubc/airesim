@@ -96,6 +96,60 @@ class NeverRemove(ServerRemovalPolicy):
         return False
 
 
+class CompositeRemovalPolicy(ServerRemovalPolicy):
+    """Fan out lifecycle hooks to two policies while delegating retirement to ``primary``.
+
+    This is useful when a scheduling policy (e.g. ``HighestScoreFirst``) needs a
+    separate ``ScoredRemoval`` instance to track per-server scores, but the actual
+    retirement decision should be made by a different policy (e.g.
+    ``ThresholdRemoval`` or ``NeverRemove``).
+
+    The ``primary`` policy owns the ``should_remove`` decision.  Both ``primary``
+    and ``secondary`` receive every ``on_failure``, ``on_success``, and ``reset``
+    call so their internal state stays up to date.
+
+    Example usage::
+
+        scorer = ScoredRemoval(initial_score=100, failure_penalty=60,
+                               retirement_threshold=float('-inf'))  # never retires
+        retirement = ThresholdRemoval(max_failures=2, window_minutes=7 * 24 * 60)
+        composite = CompositeRemovalPolicy(primary=retirement, secondary=scorer)
+
+        sim = Simulator(
+            params=params,
+            host_selection_policy=HighestScoreFirst(scorer),
+            removal_policy=composite,
+        )
+    """
+
+    def __init__(
+        self,
+        primary: ServerRemovalPolicy,
+        secondary: ServerRemovalPolicy,
+    ) -> None:
+        self.primary = primary
+        self.secondary = secondary
+
+    def should_remove(self, server: "Server", rng: random.Random) -> bool:
+        """Delegate retirement decision to ``primary``."""
+        return self.primary.should_remove(server, rng)
+
+    def on_failure(self, server: "Server") -> None:
+        """Propagate to both policies."""
+        self.primary.on_failure(server)
+        self.secondary.on_failure(server)
+
+    def on_success(self, server: "Server", duration: float) -> None:
+        """Propagate to both policies."""
+        self.primary.on_success(server, duration)
+        self.secondary.on_success(server, duration)
+
+    def reset(self) -> None:
+        """Reset both policies."""
+        self.primary.reset()
+        self.secondary.reset()
+
+
 class ThresholdRemoval(ServerRemovalPolicy):
     """Remove a server if it has exceeded a failure count within a time window."""
 
