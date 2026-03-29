@@ -16,7 +16,8 @@ from airesim.coordinator import Coordinator
 from airesim.simulator import Simulator
 from airesim.stats import StatsCollector, AggregateStats
 from airesim.sweep import OneWaySweep
-from airesim.policies import DefaultHostSelection, FewestFailuresFirst, ThresholdRemoval
+from airesim.scheduling_policies import DefaultHostSelection, FewestFailuresFirst
+from airesim.policies import ThresholdRemoval
 
 
 # ── Params tests ─────────────────────────────────────────────────────────────

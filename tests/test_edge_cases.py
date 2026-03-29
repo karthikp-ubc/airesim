@@ -31,7 +31,8 @@ from airesim.coordinator import Coordinator
 from airesim.stats import StatsCollector
 from airesim.params import Params
 from airesim.simulator import Simulator
-from airesim.policies import DefaultHostSelection, NeverRemove, DefaultRepairEscalation
+from airesim.scheduling_policies import DefaultHostSelection
+from airesim.policies import NeverRemove, DefaultRepairEscalation
 
 
 # ── helpers ──────────────────────────────────────────────────────────────────
