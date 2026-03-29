@@ -112,6 +112,15 @@ class ServerRemovalPolicy(ABC):
         The default implementation is a no-op.
         """
 
+    def reset(self) -> None:
+        """Reset any per-run state before a new independent simulation run.
+
+        Called by ``Simulator.run()`` at the start of every run so that the
+        same policy object can be reused across multiple independent
+        replications without leaking state (e.g. scores, window timestamps)
+        from one run into the next.  The default implementation is a no-op.
+        """
+
 
 class NeverRemove(ServerRemovalPolicy):
     """Never permanently remove servers (always reintegrate after repair)."""
@@ -138,7 +147,12 @@ class ScoredRemoval(ServerRemovalPolicy):
     """Score-based server retirement policy.
 
     Each server starts with ``initial_score``.  The score evolves over the
-    simulation:
+    simulation and is **reset automatically** at the start of each independent
+    simulation run (via ``Simulator.run()`` → ``reset()``), so the same
+    ``ScoredRemoval`` instance can be reused across replications without
+    cross-run score contamination.
+
+    Score dynamics:
 
     * **Failure penalty**: every time a server is blamed for a failure its
       score is reduced by ``failure_penalty``.
@@ -214,6 +228,10 @@ class ScoredRemoval(ServerRemovalPolicy):
     def get_score(self, server: "Server") -> float:
         """Return the current reliability score for *server*."""
         return self._get_score(server)
+
+    def reset(self) -> None:
+        """Clear all tracked scores so the next run starts from ``initial_score``."""
+        self._scores.clear()
 
     def scores_snapshot(self) -> dict[int, float]:
         """Return a copy of all tracked scores keyed by server id."""

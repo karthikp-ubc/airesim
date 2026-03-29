@@ -58,6 +58,10 @@ class Simulator:
 
     def run(self) -> StatsCollector:
         """Execute one simulation run and return collected statistics."""
+        # Reset any per-run state in the removal policy (e.g. ScoredRemoval's
+        # score dict) so repeated calls with the same policy object produce
+        # independent replications instead of carrying over stale scores.
+        self.removal_policy.reset()
         rng = random.Random(self.seed)
         env = simpy.Environment()
         stats = StatsCollector()
