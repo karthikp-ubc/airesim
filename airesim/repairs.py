@@ -142,6 +142,15 @@ class RepairShop:
             total_repair_time=total_time,
         )
 
+    def notify_server_available(self) -> None:
+        """Signal that a server became available outside the normal repair pipeline.
+
+        Called by the simulator when a failed server is returned to the pool
+        directly (e.g. missed diagnosis / auto-recovery) so that any stalled
+        main-loop depletion guard can wake up and re-check pool availability.
+        """
+        self._signal_repaired()
+
     def _signal_repaired(self):
         """Fire the server_repaired event.
 

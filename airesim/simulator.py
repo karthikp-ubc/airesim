@@ -232,29 +232,48 @@ class Simulator:
                         self.removal_policy.on_success(s, compute_duration)
 
                 # ── Handle failure ───────────────────────────────────────
-                # Apply diagnosis uncertainty — might blame wrong server
-                if p.diagnosis_uncertainty > 0 and rng.random() < p.diagnosis_uncertainty:
-                    # Wrong server identified — pick a random active server instead
-                    innocents = [s for s in scheduler.active_servers if s is not failed_server]
-                    if innocents:
-                        misdiagnosed = rng.choice(innocents)
-                        # The misdiagnosed server gets sent to repair instead.
-                        # Mark it failed and remove it from the pool, then rebind
-                        # failed_server so the unconditional submit below handles it.
-                        # Do NOT call repair_shop.submit() here — the block below
-                        # does the single authoritative submit (fix for bug b-i).
-                        misdiagnosed.mark_failed()
-                        pool_mgr.remove_from_working(misdiagnosed)
-                        # The actual bad server stays running (oops — misdiagnosis)
-                        failed_server.state = ServerState.IDLE
-                        failed_server = misdiagnosed
-
-                # Send the blamed server (real or misdiagnosed) to repair.
-                # remove_from_working is idempotent, so the misdiagnosis case
-                # (server already removed above) is safe.
+                # Remove failed server from the working pool immediately.
                 pool_mgr.remove_from_working(failed_server)
-                self.removal_policy.on_failure(failed_server)
-                repair_shop.submit(failed_server)
+
+                # Diagnosis step: was the failure attributed to any server?
+                # With probability (1 − diagnosis_probability) the failure
+                # goes undiagnosed — the server auto-recovers to the pool
+                # without entering the repair pipeline.
+                if p.diagnosis_probability < 1.0 and rng.random() >= p.diagnosis_probability:
+                    # Missed diagnosis — failed server returns to the working
+                    # pool immediately.  Recovery time still applies (the job
+                    # must reload its checkpoint regardless of whether the
+                    # cause was identified).
+                    failed_server.state = ServerState.IDLE
+                    pool_mgr.return_to_working(failed_server)
+                    if repair_shop.on_server_returned is not None:
+                        repair_shop.on_server_returned(failed_server)
+                    repair_shop.notify_server_available()
+                else:
+                    # Failure attributed — apply diagnosis uncertainty (might
+                    # blame wrong server).
+                    if p.diagnosis_uncertainty > 0 and rng.random() < p.diagnosis_uncertainty:
+                        # Wrong server identified — pick a random active server instead
+                        innocents = [s for s in scheduler.active_servers if s is not failed_server]
+                        if innocents:
+                            misdiagnosed = rng.choice(innocents)
+                            # The misdiagnosed server gets sent to repair instead.
+                            # Mark it failed and remove it from the pool, then rebind
+                            # failed_server so the unconditional submit below handles it.
+                            # Do NOT call repair_shop.submit() here — the block below
+                            # does the single authoritative submit (fix for bug b-i).
+                            misdiagnosed.mark_failed()
+                            pool_mgr.remove_from_working(misdiagnosed)
+                            # The actual bad server stays running (oops — misdiagnosis)
+                            failed_server.state = ServerState.IDLE
+                            failed_server = misdiagnosed
+
+                    # Send the blamed server (real or misdiagnosed) to repair.
+                    # remove_from_working is idempotent, so the misdiagnosis case
+                    # (server already removed above) is safe.
+                    pool_mgr.remove_from_working(failed_server)
+                    self.removal_policy.on_failure(failed_server)
+                    repair_shop.submit(failed_server)
 
                 # Recovery time (loading checkpoint)
                 yield env.timeout(p.recovery_time)

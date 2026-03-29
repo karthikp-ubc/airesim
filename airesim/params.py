@@ -51,7 +51,8 @@ class Params:
     lognormal_sigma: float = 1.0  # lognormal σ (std-dev of the log); smaller → less spread
 
     # ── Diagnosis ────────────────────────────────────────────────────────────
-    diagnosis_uncertainty: float = 0.0  # P(wrong server identified as cause)
+    diagnosis_probability: float = 1.0  # P(failure triggers a repair attempt on any server)
+    diagnosis_uncertainty: float = 0.0  # P(wrong server identified | failure diagnosed)
 
     # ── Bad-server regeneration ──────────────────────────────────────────────
     bad_server_regeneration: bool = False  # whether bad servers regenerate over time
@@ -86,6 +87,8 @@ class Params:
             raise ValueError("manual_repair_fail_prob must be in [0, 1]")
         if not 0 <= self.prob_auto_to_manual <= 1:
             raise ValueError("prob_auto_to_manual must be in [0, 1]")
+        if not 0 <= self.diagnosis_probability <= 1:
+            raise ValueError("diagnosis_probability must be in [0, 1]")
         if not 0 <= self.diagnosis_uncertainty <= 1:
             raise ValueError("diagnosis_uncertainty must be in [0, 1]")
         _valid_dists = ('exponential', 'weibull', 'lognormal')
