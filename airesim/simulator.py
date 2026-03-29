@@ -19,11 +19,10 @@ from airesim.scheduler import Scheduler
 from airesim.repairs import RepairShop
 from airesim.pool import PoolManager
 from airesim.stats import StatsCollector
+from airesim.scheduling_policies import DefaultHostSelection, HostSelectionPolicy
 from airesim.policies import (
-    DefaultHostSelection,
     DefaultRepairEscalation,
     NeverRemove,
-    HostSelectionPolicy,
     RepairEscalationPolicy,
     ServerRemovalPolicy,
 )

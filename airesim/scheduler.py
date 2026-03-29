@@ -12,7 +12,7 @@ from typing import TYPE_CHECKING
 import simpy
 
 from airesim.server import Server, ServerState
-from airesim.policies import HostSelectionPolicy
+from airesim.scheduling_policies import HostSelectionPolicy
 
 if TYPE_CHECKING:
     from airesim.pool import PoolManager

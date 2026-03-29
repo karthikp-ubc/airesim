@@ -2,6 +2,8 @@
 
 Users can subclass these to inject custom strategies into the simulator.
 Each policy has a sensible default implementation matching the paper's description.
+
+Host-selection (scheduling) policies live in ``airesim.scheduling_policies``.
 """
 
 from __future__ import annotations
@@ -13,49 +15,13 @@ from typing import TYPE_CHECKING
 if TYPE_CHECKING:
     from airesim.server import Server
 
-
-# ── Host selection ───────────────────────────────────────────────────────────
-
-class HostSelectionPolicy(ABC):
-    """Decide which servers from the available pool to assign to a job."""
-
-    @abstractmethod
-    def select(
-        self,
-        available_servers: list["Server"],
-        job_size: int,
-        warm_standbys: int,
-        rng: random.Random,
-    ) -> list["Server"]:
-        """Return an ordered list of servers to assign.
-
-        The first ``job_size`` are primary; the rest (up to ``warm_standbys``)
-        are warm standbys.  May return fewer than requested if not enough
-        servers are available.
-        """
-        ...
-
-
-class DefaultHostSelection(HostSelectionPolicy):
-    """Select servers randomly (uniform) from the available pool."""
-
-    def select(self, available_servers, job_size, warm_standbys, rng):
-        """Shuffle the available pool and return the first ``job_size + warm_standbys`` servers."""
-        needed = job_size + warm_standbys
-        chosen = available_servers[:needed]  # pool is already shuffled or ordered
-        rng.shuffle(chosen)
-        return chosen[:needed]
-
-
-class FewestFailuresFirst(HostSelectionPolicy):
-    """Prefer servers with the fewest historical failures."""
-
-    def select(self, available_servers, job_size, warm_standbys, rng):
-        """Sort by ascending total failure count (random tiebreak) and return the top servers."""
-        needed = job_size + warm_standbys
-        # Sort by failure count ascending, break ties randomly
-        sorted_servers = sorted(available_servers, key=lambda s: (s.total_failure_count, rng.random()))
-        return sorted_servers[:needed]
+# Re-export scheduling policies so existing imports continue to work.
+from airesim.scheduling_policies import (  # noqa: F401
+    HostSelectionPolicy,
+    DefaultHostSelection,
+    FewestFailuresFirst,
+    HighestScoreFirst,
+)
 
 
 # ── Repair escalation ────────────────────────────────────────────────────────
