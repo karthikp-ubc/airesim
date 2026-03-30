@@ -188,6 +188,62 @@ class TestDiagnosisProbabilitySimulation:
         result = Simulator(params=p, seed=99).run()
         assert result.total_training_time > 0
 
+    def test_high_uncertainty_completes(self):
+        """High diagnosis_uncertainty must not deadlock the simulation.
+
+        Before the floating-server fix, the actual bad server was removed from
+        the working pool during misdiagnosis but never returned, causing it to
+        accumulate in limbo.  At high uncertainty enough servers would float
+        that the pool dropped below the minimum needed, the stall loop would
+        wait for repairs that never woke it, and SimPy would exit silently with
+        total_training_time == 0.
+        """
+        for uncertainty in (0.4, 0.6, 0.8, 1.0):
+            p = _params(
+                random_failure_rate=0.15 / (24 * 60),
+                systematic_failure_fraction=0.2,
+                systematic_failure_rate_multiplier=5.0,
+                diagnosis_uncertainty=uncertainty,
+            )
+            result = Simulator(params=p, seed=7).run()
+            assert result.total_training_time > 0, (
+                f"Simulation deadlocked at diagnosis_uncertainty={uncertainty}"
+            )
+            assert not result.cluster_depleted
+
+    def test_full_uncertainty_no_bad_servers_diagnosed(self):
+        """With uncertainty=1.0 the actual bad server always escapes; only
+        innocent servers enter the repair pipeline.  The job must still complete
+        because the escaped bad server is returned to the pool (fix)."""
+        p = _params(
+            random_failure_rate=0.1 / (24 * 60),
+            systematic_failure_fraction=0.15,
+            systematic_failure_rate_multiplier=8.0,
+            diagnosis_uncertainty=1.0,
+        )
+        result = Simulator(params=p, seed=17).run()
+        assert result.total_training_time > 0
+        assert not result.cluster_depleted
+
+    def test_high_uncertainty_escaped_server_stays_in_pool(self):
+        """After a misdiagnosis, the actual failed server (now state=IDLE)
+        must be back in the working pool — it must not be floating."""
+        # Use uncertainty=1.0 so every diagnosed failure is a misdiagnosis:
+        # the bad server always escapes.  With a large failure rate, many
+        # misdiagnoses will occur.  If floating servers accumulated, the
+        # working pool would drain and the job would stall or deadlock.
+        p = _params(
+            working_pool_size=30,
+            spare_pool_size=10,
+            random_failure_rate=0.3 / (24 * 60),
+            systematic_failure_fraction=0.3,
+            systematic_failure_rate_multiplier=10.0,
+            diagnosis_uncertainty=1.0,
+            recovery_time=1,
+        )
+        result = Simulator(params=p, seed=99).run()
+        assert result.total_training_time > 0
+
     def test_scored_removal_not_penalised_for_missed_diagnoses(self):
         """When diagnosis is missed, on_failure is NOT called, so ScoredRemoval
         scores should be lower-variance than with full diagnosis."""

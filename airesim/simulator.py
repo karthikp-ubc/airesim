@@ -264,8 +264,14 @@ class Simulator:
                             # does the single authoritative submit (fix for bug b-i).
                             misdiagnosed.mark_failed()
                             pool_mgr.remove_from_working(misdiagnosed)
-                            # The actual bad server stays running (oops — misdiagnosis)
+                            # The actual bad server escapes — return it to the working
+                            # pool so it doesn't float in limbo (state=IDLE, absent
+                            # from every pool) and eventually deadlock the simulation.
                             failed_server.state = ServerState.IDLE
+                            pool_mgr.return_to_working(failed_server)
+                            if repair_shop.on_server_returned is not None:
+                                repair_shop.on_server_returned(failed_server)
+                            repair_shop.notify_server_available()
                             failed_server = misdiagnosed
 
                     # Send the blamed server (real or misdiagnosed) to repair.
