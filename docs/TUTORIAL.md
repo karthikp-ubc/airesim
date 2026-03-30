@@ -1,8 +1,8 @@
 # AIReSim Tutorial
 
-This tutorial walks through four common use cases, from a single simulation run to
-interpreting a full sensitivity analysis.  Every code snippet is runnable from the
-repository root.
+This tutorial walks through common use cases, from a single simulation run to
+custom scheduling policies, server retirement, and diagnosis quality modelling.
+Every code snippet is runnable from the repository root.
 
 ---
 
@@ -15,7 +15,6 @@ call `.run()`, and inspect the returned `StatsCollector`.
 from airesim.params import Params
 from airesim.simulator import Simulator
 
-# Use defaults — a 4 096-node job with sensible failure / repair rates.
 params = Params(
     job_size=64,
     warm_standbys=8,
@@ -32,6 +31,7 @@ print(f"Training time : {stats.training_time_hours:.1f} hrs")
 print(f"Total failures: {stats.total_failures}")
 print(f"Auto repairs  : {stats.auto_repairs}")
 print(f"Manual repairs: {stats.manual_repairs}")
+print(f"Servers retired: {stats.servers_retired}")
 print(f"Job stalls    : {stats.job_stall_count}")
 ```
 
@@ -51,7 +51,9 @@ print(json.dumps(stats.summary_dict(), indent=2))
 | `working_pool_size` | 4160 | Total servers in the working pool |
 | `spare_pool_size` | 200 | Cold spares (preemption required to use) |
 | `random_failure_rate` | ~6.9e-7 / min | Per-server random failure rate |
-| `recovery_time` | 20 min | Time to swap in a standby after a failure |
+| `recovery_time` | 20 min | Time to reload checkpoint after a failure |
+| `diagnosis_probability` | 1.0 | P(failure triggers a repair attempt on any server) |
+| `diagnosis_uncertainty` | 0.0 | P(wrong server blamed \| failure diagnosed) |
 | `seed` | 0 | RNG seed for reproducibility |
 
 ---
@@ -128,53 +130,92 @@ python -m airesim.run \
 
 ---
 
-## 3. Creating a Custom Host Selection Policy
+## 3. Scheduling Policies
 
-`HostSelectionPolicy` is an abstract base class.  Subclass it and pass an instance
-to `Simulator` (or to a sweep) to replace the default random selection.
+The scheduling policy decides which servers are assigned to the job at each host
+selection.  All built-in policies live in `airesim.scheduling_policies`; they are
+also re-exported from `airesim.policies` for backward compatibility.
 
-### Example: prefer servers that haven't failed recently
+### Built-in policies
+
+```python
+from airesim.scheduling_policies import (
+    DefaultHostSelection,   # uniform random (default)
+    FewestFailuresFirst,    # prefer servers with fewest cumulative failures
+    HighestScoreFirst,      # prefer servers with highest ScoredRemoval score
+)
+from airesim.simulator import Simulator
+from airesim.params import Params
+
+params = Params(
+    job_size=64, warm_standbys=8,
+    working_pool_size=80, spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    systematic_failure_fraction=0.1,
+    systematic_failure_rate_multiplier=10.0,
+    seed=42,
+)
+
+# FewestFailuresFirst: deprioritises servers that have failed often
+sim = Simulator(params, seed=42, host_selection_policy=FewestFailuresFirst())
+stats = sim.run()
+print(f"FewestFailuresFirst: {stats.training_time_hours:.1f} hrs")
+```
+
+`FewestFailuresFirst` uses `server.total_failure_count` — the server's actual
+hardware failure count — regardless of how failures were diagnosed.  This makes it
+robust even under high `diagnosis_uncertainty`.
+
+`HighestScoreFirst` requires a `ScoredRemoval` instance (see §4) and sorts by
+descending score:
+
+```python
+from airesim.policies import ScoredRemoval
+from airesim.scheduling_policies import HighestScoreFirst
+
+scorer = ScoredRemoval(
+    initial_score=100.0,
+    failure_penalty=60.0,
+    success_increment=10.0,
+    time_period=24 * 60,       # 1 day
+    retirement_threshold=0.0,  # retire when score ≤ 0
+)
+sim = Simulator(params, seed=42,
+                host_selection_policy=HighestScoreFirst(scorer),
+                removal_policy=scorer)
+stats = sim.run()
+```
+
+> **Note:** At large cluster scale with short job chunks (mean chunk ≪ `time_period`),
+> `HighestScoreFirst` and `FewestFailuresFirst` produce identical server orderings
+> because no uptime credits are ever awarded and score reduces to a linear function
+> of failure count.
+
+### Writing a custom scheduling policy
+
+Subclass `HostSelectionPolicy` and implement `select`:
 
 ```python
 import random
-from airesim.policies import HostSelectionPolicy
-from airesim.params import Params
-from airesim.simulator import Simulator
-
+from airesim.scheduling_policies import HostSelectionPolicy
 
 class HealthiestFirst(HostSelectionPolicy):
     """Pick servers with the fewest failures in the last 7 days."""
 
     WINDOW = 7 * 24 * 60  # 7 days in minutes
 
-    def select(
-        self,
-        available_servers,
-        job_size: int,
-        warm_standbys: int,
-        rng: random.Random,
-    ):
+    def select(self, available_servers, job_size: int, warm_standbys: int,
+               rng: random.Random):
         needed = job_size + warm_standbys
-        # Sort by recent failures ascending, break ties with a random tiebreak.
         ranked = sorted(
             available_servers,
             key=lambda s: (s.failures_in_window(self.WINDOW), rng.random()),
         )
         return ranked[:needed]
 
-
-params = Params(
-    job_size=64,
-    warm_standbys=8,
-    working_pool_size=80,
-    spare_pool_size=16,
-    job_length=60 * 24 * 60,
-    seed=42,
-)
-
 sim = Simulator(params, seed=42, host_selection_policy=HealthiestFirst())
 stats = sim.run()
-print(f"Training time with HealthiestFirst: {stats.training_time_hours:.1f} hrs")
+print(f"HealthiestFirst: {stats.training_time_hours:.1f} hrs")
 ```
 
 ### Using a custom policy in a sweep
@@ -193,17 +234,183 @@ result = sweep.run()
 result.summary()
 ```
 
-### Other pluggable policies
+---
 
-| Base class | Purpose | Defaults |
-|---|---|---|
-| `HostSelectionPolicy` | Choose which servers run the job | `DefaultHostSelection` (random) |
-| `RepairEscalationPolicy` | Decide when auto → manual repair | `DefaultRepairEscalation` (80 % escalation) |
-| `ServerRemovalPolicy` | Retire chronically failing servers | `NeverRemove` |
+## 4. Server Retirement Policies
+
+Retirement policies decide whether a server that has just completed repair should
+be returned to the pool or permanently retired.  All are in `airesim.policies`.
+
+### `ThresholdRemoval` — retire based on failure rate
+
+Retire a server if it has had ≥ `max_failures` failures in the most recent
+`window_minutes` of simulated time:
+
+```python
+from airesim.policies import ThresholdRemoval
+from airesim.simulator import Simulator
+
+removal = ThresholdRemoval(
+    max_failures=2,
+    window_minutes=7 * 24 * 60,   # 7-day rolling window
+)
+
+sim = Simulator(params, seed=42, removal_policy=removal)
+stats = sim.run()
+print(f"Servers retired: {stats.servers_retired}")
+print(f"Training time  : {stats.training_time_hours:.1f} hrs")
+```
+
+`ThresholdRemoval` reads `server.failures_in_window()`, which counts actual hardware
+failures regardless of whether they were diagnosed.  This gives it partial
+effectiveness even at lower `diagnosis_probability` values.
+
+### `ScoredRemoval` — retire based on a running score
+
+Each server starts at `initial_score`.  Every failure deducts `failure_penalty`;
+every successful run of at least `time_period` minutes adds `success_increment`.
+A server is retired when its score falls to or below `retirement_threshold`:
+
+```python
+from airesim.policies import ScoredRemoval
+
+removal = ScoredRemoval(
+    initial_score=100.0,
+    failure_penalty=60.0,
+    success_increment=10.0,
+    time_period=24 * 60,       # earn credit per full day of uptime
+    retirement_threshold=0.0,  # retire when score hits 0
+)
+
+sim = Simulator(params, seed=42, removal_policy=removal)
+stats = sim.run()
+print(f"Servers retired: {stats.servers_retired}")
+
+# Inspect final scores
+for server_id, score in removal.scores_snapshot().items():
+    if score < 40:
+        print(f"  Server {server_id}: score={score:.1f}")
+```
+
+`ScoredRemoval` requires diagnosed failures to work: `on_failure` is only called for
+the server that was *blamed* (which may be an innocent server under misdiagnosis).
+At high `diagnosis_uncertainty` (≥ 0.6) it can become counter-productive — see §5.
+
+### `CompositeRemovalPolicy` — combine scheduling scores with a separate retirement policy
+
+To use `HighestScoreFirst` scheduling while retiring servers by threshold (rather
+than by score), wire a shared `ScoredRemoval` scorer through a composite:
+
+```python
+from airesim.policies import ScoredRemoval, CompositeRemovalPolicy, ThresholdRemoval
+from airesim.scheduling_policies import HighestScoreFirst
+
+scorer = ScoredRemoval(
+    initial_score=100.0,
+    failure_penalty=60.0,
+    success_increment=10.0,
+    time_period=24 * 60,
+    retirement_threshold=float('-inf'),  # never retires — scores only
+)
+retirement = ThresholdRemoval(max_failures=2, window_minutes=7 * 24 * 60)
+
+policy = CompositeRemovalPolicy(primary=retirement, secondary=scorer)
+
+sim = Simulator(
+    params, seed=42,
+    host_selection_policy=HighestScoreFirst(scorer),
+    removal_policy=policy,
+)
+stats = sim.run()
+```
+
+`CompositeRemovalPolicy` fans out `on_failure`, `on_success`, and `reset` to both
+policies, but delegates `should_remove` to the primary (`retirement`) only.
 
 ---
 
-## 4. Interpreting the Sensitivity Summary
+## 5. Modelling Diagnosis Quality
+
+Two parameters control how accurately failures are attributed:
+
+| Parameter | Meaning | Effect at extreme values |
+|-----------|---------|--------------------------|
+| `diagnosis_probability` | P(failure triggers any repair attempt) | At 0: failed server auto-recovers; repair pipeline never entered |
+| `diagnosis_uncertainty` | P(wrong server blamed \| diagnosed) | At 1: innocent server always sent to repair; bad server always escapes |
+
+### Missed diagnoses (`diagnosis_probability < 1`)
+
+When a failure goes undiagnosed, the failed server is immediately returned to the
+working pool (auto-recovery) and the job pays only `recovery_time` to reload its
+checkpoint.  No server enters the repair pipeline.
+
+```python
+params_low_diag = Params(
+    job_size=64, warm_standbys=8,
+    working_pool_size=80, spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    systematic_failure_fraction=0.1,
+    systematic_failure_rate_multiplier=10.0,
+    diagnosis_probability=0.5,   # only half of failures trigger repair
+    diagnosis_uncertainty=0.0,
+    seed=42,
+)
+
+sim = Simulator(params_low_diag, seed=42)
+stats = sim.run()
+print(f"Training time (prob=0.5): {stats.training_time_hours:.1f} hrs")
+print(f"Auto repairs: {stats.auto_repairs}")  # ~half of full-diagnosis count
+```
+
+**Guidance:**
+- Below `diagnosis_probability ≈ 0.40`, retirement policies give no net benefit.
+- `ThresholdRemoval` has partial immunity: it reads `failure_timestamps` (actual
+  hardware failures) regardless of diagnosis outcome, so it can retire bad servers on
+  the first repair entry that does occur.
+- `ScoredRemoval` is fully blind to missed failures; it requires `probability ≥ 0.60`
+  to start paying off.
+
+### Misattribution (`diagnosis_uncertainty > 0`)
+
+When a failure is misattributed, an innocent server is sent to repair and the actual
+bad server is returned to the pool and continues running.
+
+```python
+params_uncertain = Params(
+    job_size=64, warm_standbys=8,
+    working_pool_size=80, spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    systematic_failure_fraction=0.1,
+    systematic_failure_rate_multiplier=10.0,
+    diagnosis_probability=1.0,
+    diagnosis_uncertainty=0.2,   # 20% of repairs sent to wrong server
+    seed=42,
+)
+
+sim = Simulator(params_uncertain, seed=42)
+stats = sim.run()
+print(f"Training time (unc=0.2): {stats.training_time_hours:.1f} hrs")
+```
+
+**Guidance by uncertainty level:**
+
+| `diagnosis_uncertainty` | Recommended policy | Notes |
+|------------------------|--------------------|-------|
+| 0.00 | `Random + ScoredRemoval` | Optimal: ~−160 h vs. no-retirement baseline |
+| ≤ 0.20 | `FewestFail + ScoredRemoval` | ~−105 h, low variance |
+| 0.20–0.60 | `FewestFail + ScoredRemoval` or `FewestFail + ThresholdRemoval` | ScoredRemoval near-breakeven at 0.60 |
+| ≥ 0.60 | `FewestFailuresFirst + NeverRemove` | No retirement policy gives net benefit; scheduling alone helps |
+| = 1.00 | **Avoid ScoredRemoval** | Retires innocent servers, keeps bad ones — actively harmful |
+
+> **Why `FewestFailuresFirst` helps at high uncertainty:** It sorts by
+> `server.total_failure_count`, which counts *actual* hardware failures regardless of
+> misattribution.  Bad servers accumulate real failure counts quickly, so
+> `FewestFailuresFirst` deprioritises them even when their failures are attributed to
+> innocent servers.
+
+---
+
+## 6. Interpreting the Sensitivity Summary
 
 A sensitivity analysis runs one-way sweeps over many parameters and ranks them by
 the *range* of the mean metric (max mean − min mean across swept values).  A large
@@ -231,6 +438,8 @@ PARAMS_TO_SWEEP = [
     ("warm_standbys",        [2, 8, 16]),
     ("auto_repair_time",     [60, 120, 240]),
     ("manual_repair_time",   [720, 2880, 5760]),
+    ("diagnosis_probability",[0.4, 0.7, 1.0]),
+    ("diagnosis_uncertainty",[0.0, 0.2, 0.4]),
 ]
 
 one_way_results = {}
@@ -253,7 +462,9 @@ print_sensitivity_table(rows)
 Parameter                           Min        Max      Range   Impact
 ------------------------------------------------------------------------------
 manual_repair_time                  820.3     1640.5     820.2     high
+diagnosis_probability               900.1     1250.8     350.7     high
 recovery_time                       900.1     1050.8     150.7   medium
+diagnosis_uncertainty               960.0     1080.0     120.0   medium
 auto_repair_time                    940.2      980.3      40.1      low
 preemption_wait_time                960.0      970.0      10.0      low
 warm_standbys                       960.5      961.0       0.5     none
@@ -261,8 +472,7 @@ warm_standbys                       960.5      961.0       0.5     none
 
 - **Range** — the headline number.  Larger means more leverage over training time.
 - **Min / Max** — the mean training time at the lowest and highest swept value.
-  Check whether a high Max comes from the low end or high end of the parameter
-  range; that tells you the direction of the effect.
+  Check which end of the parameter range produces the worse outcome.
 - **Impact classification**
   - `high`   — range > 20 % of the max mean
   - `medium` — range 5–20 % of the max mean
@@ -272,8 +482,8 @@ warm_standbys                       960.5      961.0       0.5     none
 ### Generating a tornado chart
 
 ```python
-from airesim.simulator import Simulator
 import statistics
+from airesim.simulator import Simulator
 from airesim.plotting import plot_tornado_chart
 
 baseline_runs = [
@@ -294,3 +504,61 @@ The chart draws a horizontal bar for each parameter spanning from its minimum to
 maximum mean training time.  The dashed vertical line marks the baseline (all
 parameters at their mid values).  Parameters are sorted so the highest-impact one
 appears at the top.
+
+---
+
+## 7. Policy Comparison Recipe
+
+A common pattern is running the same base scenario across all combinations of
+scheduling and retirement policies to find the best pairing.
+
+```python
+from itertools import product
+from airesim.params import Params
+from airesim.simulator import Simulator
+from airesim.scheduling_policies import DefaultHostSelection, FewestFailuresFirst
+from airesim.policies import NeverRemove, ThresholdRemoval, ScoredRemoval
+import statistics
+
+params = Params(
+    job_size=64, warm_standbys=8,
+    working_pool_size=80, spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    systematic_failure_fraction=0.08,
+    systematic_failure_rate_multiplier=20.0,
+    auto_repair_fail_prob=0.60,
+    manual_repair_fail_prob=0.75,
+    seed=42,
+)
+
+N_REPS = 5
+
+def run_policy(sched_factory, retire_factory, params, n_reps):
+    times = []
+    for rep in range(n_reps):
+        sim = Simulator(params,
+                        host_selection_policy=sched_factory(),
+                        removal_policy=retire_factory(),
+                        seed=params.seed + rep)
+        times.append(sim.run().training_time_hours)
+    return statistics.mean(times), statistics.stdev(times)
+
+combos = [
+    ("Random",       "NeverRemove",  DefaultHostSelection, NeverRemove),
+    ("Random",       "Threshold",    DefaultHostSelection,
+     lambda: ThresholdRemoval(max_failures=2, window_minutes=7*24*60)),
+    ("Random",       "Scored",       DefaultHostSelection,
+     lambda: ScoredRemoval(100.0, 60.0, 10.0, 24*60, 0.0)),
+    ("FewestFail",   "NeverRemove",  FewestFailuresFirst,  NeverRemove),
+    ("FewestFail",   "Threshold",    FewestFailuresFirst,
+     lambda: ThresholdRemoval(max_failures=2, window_minutes=7*24*60)),
+    ("FewestFail",   "Scored",       FewestFailuresFirst,
+     lambda: ScoredRemoval(100.0, 60.0, 10.0, 24*60, 0.0)),
+]
+
+print(f"{'Scheduling':<14} {'Retirement':<12}  {'Mean (h)':>9}  {'Std':>6}")
+print("-" * 48)
+for sched_label, retire_label, sched_f, retire_f in combos:
+    mean, std = run_policy(sched_f, retire_f, params, N_REPS)
+    print(f"{sched_label:<14} {retire_label:<12}  {mean:>8.1f}h  {std:>5.1f}")
+```

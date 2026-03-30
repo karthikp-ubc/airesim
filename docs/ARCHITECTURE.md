@@ -51,6 +51,15 @@ Sweep layer (optional):
 simulation run (failure rates, repair times, pool sizes, job parameters, RNG seed,
 and so on).  All times are in **minutes**; all rates are in **failures per minute**.
 
+**Diagnosis parameters** (added alongside the existing `diagnosis_uncertainty`):
+
+| Parameter | Meaning |
+|-----------|---------|
+| `diagnosis_probability` | P(failure triggers a repair attempt on *any* server). At 0 the failed server auto-recovers instantly; no server enters the repair pipeline. |
+| `diagnosis_uncertainty` | P(wrong server blamed \| failure diagnosed). At 1 every repair is sent to a randomly chosen innocent server while the actual bad server escapes. |
+
+Both are validated in `[0, 1]` by `validate()`.
+
 **Design decisions:**
 
 - *Single source of truth.* Every other module receives the values it needs directly
@@ -151,6 +160,10 @@ signal event so the main loop can wake up if it was waiting for a server.
   `Scheduler.return_server_to_job`, so repaired servers flow back into the warm-
   standby list mid-job without the repair shop needing to know anything about
   scheduling.  This keeps the two components decoupled.
+- *`notify_server_available()` public method.* Called by the simulator when a server
+  is returned to the pool outside the normal repair pipeline (missed diagnosis or
+  escaped bad server after misdiagnosis).  Fires `_signal_repaired()` so any stalled
+  main-loop depletion guard can wake and re-check pool availability.
 - *`server_repaired_event` lifecycle (race-condition fix).* A naive implementation
   would `succeed()` the event and immediately replace it with a fresh event.  But if
   the main loop was running (not suspended in a `yield`) when the repair fired, the
@@ -206,30 +219,130 @@ then drives `simpy.Environment.run()` through a single `_main_loop` process.
   a background process periodically converts some good servers to bad, modelling
   hardware aging or batch deployments of lower-quality nodes.
 
+**Failure-handling and diagnosis pipeline** (`_main_loop`, failure branch):
+
+```
+pool_mgr.remove_from_working(failed_server)
+
+if rng.random() >= diagnosis_probability:          # missed diagnosis
+    failed_server.state = IDLE
+    pool_mgr.return_to_working(failed_server)      # auto-recover, no repair
+    repair_shop.notify_server_available()
+else:                                               # failure attributed
+    if rng.random() < diagnosis_uncertainty:        # wrong server blamed
+        misdiagnosed = rng.choice(innocents)
+        misdiagnosed.mark_failed()
+        pool_mgr.remove_from_working(misdiagnosed)
+        failed_server.state = IDLE
+        pool_mgr.return_to_working(failed_server)  # bad server escapes back to pool
+        # NOTE: on_server_returned is NOT called here — bad server stays in
+        # active_servers and must not be added to warm_standbys (would duplicate it)
+        repair_shop.notify_server_available()
+        failed_server = misdiagnosed               # rebind: innocent goes to repair
+    removal_policy.on_failure(failed_server)
+    repair_shop.submit(failed_server)
+```
+
+**Bug fixes in this path:**
+
+1. *Floating-server deadlock (fixed).* Before the fix, when misdiagnosis fired the
+   bad server was removed from `working_pool` (line above the branch) but never
+   returned.  After host selection replaced `active_servers`, the bad server existed
+   in no pool and was not tracked anywhere — it was "floating".  Accumulated floating
+   servers drained `available_in_working` below `total_servers_needed`, causing the
+   stall loop to wait forever on a repair event that would never come, and SimPy to
+   exit silently with `total_training_time = 0`.  Fix: `pool_mgr.return_to_working`
+   is called for the escaped bad server before rebinding `failed_server`.
+
+2. *Active-server duplication (fixed).* An earlier version of the fix also called
+   `repair_shop.on_server_returned` for the escaped bad server.  That callback
+   (`scheduler.return_server_to_job`) adds the server to `warm_standbys` if a slot is
+   free.  Since the bad server was still in `active_servers`, the next
+   `swap_in_standby` call could pop it from `warm_standbys` and append it to
+   `active_servers` a second time, creating a duplicate.  Fix: `on_server_returned`
+   is not called for the escaped bad server — it continues running in `active_servers`
+   unchanged.
+
 ---
 
-### `policies.py` — pluggable strategy interfaces
+### `scheduling_policies.py` — host-selection strategies
 
-**What it does:** Defines three abstract base classes and their default implementations:
+**What it does:** Defines the `HostSelectionPolicy` ABC and all concrete
+implementations.  Refactored out of `policies.py` to keep the two orthogonal
+concerns (scheduling vs. retirement) in separate files.  `policies.py` re-exports
+these names for backward compatibility.
 
-| ABC | Question answered | Default |
-|---|---|---|
-| `HostSelectionPolicy` | Which servers should run the job? | `DefaultHostSelection` — uniform random |
-| `RepairEscalationPolicy` | Should auto repair escalate to manual? | `DefaultRepairEscalation` — fixed probability |
-| `ServerRemovalPolicy` | Should a repaired server be retired? | `NeverRemove` — always reintegrate |
-
-Also provided: `FewestFailuresFirst` (lowest-failure-count selection) and
-`ThresholdRemoval` (retire if failures in window ≥ threshold).
+| Class | Strategy |
+|-------|----------|
+| `DefaultHostSelection` | Uniform random selection |
+| `FewestFailuresFirst` | Sort ascending by `total_failure_count`; fewest-failures servers run first |
+| `HighestScoreFirst` | Sort descending by `ScoredRemoval` score; highest-scored servers run first |
 
 **Design decisions:**
 
-- *Strategy pattern.* All three policies are injected into `Simulator` at
-  construction time.  This lets users experiment with custom logic (see
-  `docs/TUTORIAL.md`) without touching the simulator core.
-- *`rng` passed into every `select` / `should_remove` call.* Policies that need
-  randomness share the simulation's RNG rather than constructing their own, ensuring
-  all stochasticity flows through a single seeded source and results remain
-  reproducible.
+- *`HighestScoreFirst` takes a `ScoredRemoval` instance.* The scheduler and the
+  removal policy share one scorer object so scores stay in sync.  When paired with a
+  non-ScoredRemoval retirement policy, use `CompositeRemovalPolicy` (see below) to
+  maintain scores for scheduling while delegating retirement decisions to a separate
+  policy.
+- *`HighestScoreFirst` ≡ `FewestFailuresFirst` at large scale with short chunks.*
+  Credits are earned per `floor(chunk / time_period)` periods.  When mean run chunks
+  are much shorter than `time_period` (e.g. 7-minute chunks vs. 1-day periods), no
+  credits are ever awarded, and score = `initial − penalty × failures` — a strictly
+  decreasing linear function of failure count, identical to `FewestFailuresFirst`'s
+  ordering.
+
+---
+
+### `policies.py` — repair-escalation and server-removal strategies
+
+**What it does:** Defines two ABCs and their implementations for repair and
+retirement decisions.  Also re-exports all `scheduling_policies` names for
+backward compatibility.
+
+| Class | Type | Description |
+|-------|------|-------------|
+| `RepairEscalationPolicy` | ABC | Should auto repair escalate to manual? |
+| `DefaultRepairEscalation` | concrete | Fixed probability of escalation |
+| `ServerRemovalPolicy` | ABC | Should a repaired server be permanently retired? |
+| `NeverRemove` | concrete | Always reintegrate |
+| `ThresholdRemoval` | concrete | Retire if failures in rolling window ≥ threshold |
+| `ScoredRemoval` | concrete | Retire when score drops below threshold; score tracks history via penalty/credit |
+| `CompositeRemovalPolicy` | concrete | Fan-out to two policies; `should_remove` delegates to primary |
+
+**`ScoredRemoval` design:**
+
+- Each server starts at `initial_score`.  Every call to `on_failure` deducts
+  `failure_penalty`.  Every call to `on_success(duration)` adds
+  `success_increment × floor(duration / time_period)`.
+- `should_remove` retires the server if its score ≤ `retirement_threshold`.
+- `scores_snapshot()` returns a read-only copy of all current scores (used in tests
+  and analysis scripts).
+- `reset()` clears all scores so the same policy object can be reused across
+  independent replications.
+
+**`CompositeRemovalPolicy` design:**
+
+Enables `HighestScoreFirst` scheduling paired with a non-`ScoredRemoval` retirement
+policy (e.g. `ThresholdRemoval`).  The composite fans out `on_failure`, `on_success`,
+and `reset` to both the primary and secondary policy, but delegates `should_remove` to
+the primary alone.  A typical pairing:
+
+```python
+scorer = ScoredRemoval(retirement_threshold=float('-inf'))  # scores only, never retires
+policy = CompositeRemovalPolicy(
+    primary=ThresholdRemoval(max_failures=2, window_minutes=7*24*60),
+    secondary=scorer,
+)
+scheduler = HighestScoreFirst(scorer)
+```
+
+**Design decisions:**
+
+- *Strategy pattern.* All policies are injected into `Simulator` at construction
+  time, keeping the simulator core policy-agnostic.
+- *`rng` passed into every `should_remove` call.* Policies that need randomness
+  share the simulation's RNG for reproducibility.
 
 ---
 
@@ -356,16 +469,18 @@ OneWaySweep / TwoWaySweep
 run.py
  └─ sweep.py ──► simulator.py ──► coordinator.py
                 │               ├─► repairs.py
-                │               ├─► scheduler.py
+                │               ├─► scheduler.py ──► scheduling_policies.py
                 │               ├─► pool.py
                 │               ├─► server.py
                 │               ├─► params.py
                 │               ├─► stats.py
-                │               └─► policies.py
+                │               ├─► policies.py ──► scheduling_policies.py (re-export)
+                │               └─► scheduling_policies.py
                 └─ stats.py
 plotting.py (no simulator imports — consumes SweepResult only)
 ```
 
-No circular dependencies.  `plotting.py` uses a `TYPE_CHECKING` guard so
-`SweepResult` is only imported for type checking, keeping it independent of the
-simulation core at runtime.
+No circular dependencies.  `policies.py` imports from `scheduling_policies.py` for
+re-export only; `scheduling_policies.py` does not import `policies.py`.
+`plotting.py` uses a `TYPE_CHECKING` guard so `SweepResult` is only imported for
+type checking, keeping it independent of the simulation core at runtime.
