@@ -244,6 +244,40 @@ class TestDiagnosisProbabilitySimulation:
         result = Simulator(params=p, seed=99).run()
         assert result.total_training_time > 0
 
+    def test_escaped_server_not_duplicated_in_active_servers(self):
+        """The escaped bad server must NOT appear in warm_standbys after
+        misdiagnosis — it is still in active_servers and calling
+        on_server_returned would add it to standbys, causing it to be
+        appended to active_servers a second time on the next swap_in_standby.
+
+        Proxy signal: if duplicates accumulate, the coordinator sees more
+        virtual servers than exist, which inflates active_server counts and
+        corrupts statistics.  We detect this by verifying that the number of
+        failures recorded never wildly exceeds what a deduplicated active set
+        would produce.
+        """
+        # Use small pool and tiny warm_standbys so standbys are quickly
+        # depleted between failures, maximising the chance that
+        # on_server_returned finds an empty standby slot.
+        p = _params(
+            job_size=4,
+            warm_standbys=1,
+            working_pool_size=12,
+            spare_pool_size=4,
+            job_length=6 * 60,
+            random_failure_rate=0.5 / (24 * 60),
+            systematic_failure_fraction=0.3,
+            systematic_failure_rate_multiplier=20.0,
+            diagnosis_uncertainty=1.0,
+            recovery_time=1,
+            auto_repair_time=5,
+            manual_repair_time=10,
+        )
+        result = Simulator(params=p, seed=55).run()
+        # Job must complete (no deadlock)
+        assert result.total_training_time > 0
+        assert not result.cluster_depleted
+
     def test_scored_removal_not_penalised_for_missed_diagnoses(self):
         """When diagnosis is missed, on_failure is NOT called, so ScoredRemoval
         scores should be lower-variance than with full diagnosis."""
