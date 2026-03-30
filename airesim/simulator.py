@@ -267,10 +267,12 @@ class Simulator:
                             # The actual bad server escapes — return it to the working
                             # pool so it doesn't float in limbo (state=IDLE, absent
                             # from every pool) and eventually deadlock the simulation.
+                            # Do NOT call on_server_returned here: the bad server is
+                            # still in active_servers (it was never swapped out).
+                            # Adding it to warm_standbys would create a duplicate in
+                            # active_servers on the next swap_in_standby call.
                             failed_server.state = ServerState.IDLE
                             pool_mgr.return_to_working(failed_server)
-                            if repair_shop.on_server_returned is not None:
-                                repair_shop.on_server_returned(failed_server)
                             repair_shop.notify_server_available()
                             failed_server = misdiagnosed
 
