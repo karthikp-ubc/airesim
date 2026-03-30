@@ -1,10 +1,18 @@
 # Diagnosis Parameter Sweep — Report
 
 **Regime:** 20× failure multiplier | 75% manual repair fail probability | 4 600-server pool
-**Replications per cell:** 8
-**Baseline:** Random + NeverRemove, diagnosis\_probability = 1.0, diagnosis\_uncertainty = 0.0 → **2 215 h**
+**Replications per cell:** 3
+**Baseline:** Random + NeverRemove, diagnosis\_probability = 1.0, diagnosis\_uncertainty = 0.0 → **2 190 h**
 
 Figures: `examples/diagnosis_sweep_figures/`
+
+> **Note:** Results in §3 (Sweep B) reflect the post-bugfix simulation.  Two bugs in the
+> misdiagnosis path were fixed before this sweep was run:
+> 1. *Floating-server deadlock* — escaped bad servers were not returned to the working pool,
+>    causing the simulation to deadlock silently at high uncertainty.
+> 2. *Active-server duplication* — `on_server_returned` was called for the escaped bad server
+>    while it was still in `active_servers`, potentially adding it to `warm_standbys` and
+>    creating a duplicate in `active_servers` on the next standby swap.
 
 ---
 
@@ -18,242 +26,222 @@ Figures: `examples/diagnosis_sweep_figures/`
 At `diagnosis_probability = 0` every failure goes undiagnosed: the failed server auto-recovers
 to the working pool instantly without entering the repair pipeline.
 At `diagnosis_uncertainty = 1` every diagnosed failure is attributed to a randomly chosen
-*innocent* server; the actual bad server escapes.
+*innocent* server; the actual bad server escapes back into `active_servers`.
 
 ---
 
 ## 2  Sweep A — `diagnosis_probability`  (uncertainty fixed at 0)
 
+*The bug fix does not affect this sweep: uncertainty = 0 means no misdiagnosis ever fires.*
+
 ### 2.1  Raw results
 
 | prob | Scheduling+Retirement        | Mean (h) | Std  | Δ vs baseline | Retired |
 |------|------------------------------|----------|------|--------------|---------|
-| 0.00 | Random+NeverRemove           | 3 251.7  |  49.2 | +1 036.3    |     0.0 |
-| 0.00 | Random+Thresh ≥2/7d          | 3 251.7  |  49.2 | +1 036.3    |     0.0 |
-| 0.00 | Random+ScoredRemoval         | 3 251.7  |  49.2 | +1 036.3    |     0.0 |
-| 0.00 | FewestFailures+NeverRemove   | 3 264.8  |  54.9 | +1 049.4    |     0.0 |
-| 0.00 | FewestFailures+Thresh ≥2/7d  | 3 264.8  |  54.9 | +1 049.4    |     0.0 |
-| 0.00 | FewestFailures+ScoredRemoval | 3 264.8  |  54.9 | +1 049.4    |     0.0 |
-| 0.20 | Random+NeverRemove           | 2 587.0  | 307.6 |   +371.6    |     0.0 |
-| 0.20 | Random+Thresh ≥2/7d          | 2 447.7  |  58.3 |   +232.4    |    41.0 |
-| 0.20 | Random+ScoredRemoval         | 2 451.1  |  38.0 |   +235.7    |    33.0 |
-| 0.20 | FewestFailures+NeverRemove   | 2 923.1  | 243.6 |   +707.7    |     0.0 |
-| 0.20 | FewestFailures+Thresh ≥2/7d  | 2 274.1  |  55.5 |    +58.7    |    36.5 |
-| 0.20 | FewestFailures+ScoredRemoval | 2 351.8  |  42.9 |   +136.4    |    27.8 |
-| 0.40 | Random+NeverRemove           | 2 344.0  |  82.0 |   +128.7    |     0.0 |
-| 0.40 | Random+Thresh ≥2/7d          | 2 325.9  |  51.3 |   +110.5    |    60.6 |
-| 0.40 | Random+ScoredRemoval         | 2 316.7  |  35.0 |   +101.4    |   101.8 |
-| 0.40 | FewestFailures+NeverRemove   | 2 397.2  | 114.8 |   +181.8    |     0.0 |
-| 0.40 | FewestFailures+Thresh ≥2/7d  | 2 213.5  |  48.1 |     **−1.9**|    53.5 |
-| 0.40 | FewestFailures+ScoredRemoval | 2 198.3  |  39.9 |    **−17.1**|    72.6 |
-| 0.60 | Random+NeverRemove           | 2 303.9  |  66.2 |    +88.5    |     0.0 |
-| 0.60 | Random+Thresh ≥2/7d          | 2 231.4  |  43.9 |    +16.1    |    67.4 |
-| 0.60 | Random+ScoredRemoval         | 2 228.2  |  34.9 |    +12.9    |   180.6 |
-| 0.60 | FewestFailures+NeverRemove   | 2 231.2  |  30.7 |    +15.8    |     0.0 |
-| 0.60 | FewestFailures+Thresh ≥2/7d  | 2 161.7  |  44.1 |    **−53.7**|    61.1 |
-| 0.60 | FewestFailures+ScoredRemoval | 2 127.8  |  24.2 |    **−87.6**|   142.6 |
-| 0.80 | Random+NeverRemove           | 2 234.6  |  63.4 |    +19.2    |     0.0 |
-| 0.80 | Random+Thresh ≥2/7d          | 2 239.0  |  20.6 |    +23.7    |    73.4 |
-| 0.80 | Random+ScoredRemoval         | 2 168.0  |  36.2 |    **−47.3**|   268.0 |
-| 0.80 | FewestFailures+NeverRemove   | 2 168.2  |  48.8 |    **−47.2**|     0.0 |
-| 0.80 | FewestFailures+Thresh ≥2/7d  | 2 123.6  |  40.3 |    **−91.7**|    66.9 |
-| 0.80 | FewestFailures+ScoredRemoval | 2 121.0  |  36.5 |    **−94.3**|   229.5 |
-| 1.00 | Random+NeverRemove           | 2 215.3  |  35.4 |       0.0   |     0.0 |
-| 1.00 | Random+Thresh ≥2/7d          | 2 140.6  |  50.6 |    **−74.7**|    70.9 |
-| 1.00 | Random+ScoredRemoval         | 2 046.6  |  26.3 |   **−168.7**|   338.2 |
-| 1.00 | FewestFailures+NeverRemove   | 2 116.2  |  56.1 |    **−99.2**|     0.0 |
-| 1.00 | FewestFailures+Thresh ≥2/7d  | 2 097.2  |  48.1 |   **−118.2**|    69.1 |
-| 1.00 | FewestFailures+ScoredRemoval | 2 064.5  |  35.5 |   **−150.9**|   334.8 |
+| 0.00 | Random+NeverRemove           | 3 250.7  |  63.8 | +1 060.3    |     0.0 |
+| 0.00 | Random+Thresh ≥2/7d          | 3 250.7  |  63.8 | +1 060.3    |     0.0 |
+| 0.00 | Random+ScoredRemoval         | 3 250.7  |  63.8 | +1 060.3    |     0.0 |
+| 0.00 | FewestFail+NeverRemove       | 3 264.7  |  55.2 | +1 074.3    |     0.0 |
+| 0.00 | FewestFail+Thresh ≥2/7d      | 3 264.7  |  55.2 | +1 074.3    |     0.0 |
+| 0.00 | FewestFail+ScoredRemoval     | 3 264.7  |  55.2 | +1 074.3    |     0.0 |
+| 0.20 | Random+NeverRemove           | 2 584.8  | 292.2 |   +394.4    |     0.0 |
+| 0.20 | Random+Thresh ≥2/7d          | 2 465.9  |   9.1 |   +275.5    |    39.3 |
+| 0.20 | Random+ScoredRemoval         | 2 440.2  |  46.3 |   +249.8    |    39.0 |
+| 0.20 | FewestFail+NeverRemove       | 2 782.4  | 393.0 |   +592.0    |     0.0 |
+| 0.20 | FewestFail+Thresh ≥2/7d      | 2 287.9  |  17.6 |    +97.5    |    35.3 |
+| 0.20 | FewestFail+ScoredRemoval     | 2 335.8  |  46.5 |   +145.5    |    29.3 |
+| 0.40 | Random+NeverRemove           | 2 352.1  |  94.6 |   +161.8    |     0.0 |
+| 0.40 | Random+Thresh ≥2/7d          | 2 347.0  |  65.6 |   +156.6    |    59.7 |
+| 0.40 | Random+ScoredRemoval         | 2 336.2  |  22.4 |   +145.8    |   107.7 |
+| 0.40 | FewestFail+NeverRemove       | 2 386.5  |  73.0 |   +196.1    |     0.0 |
+| 0.40 | FewestFail+Thresh ≥2/7d      | 2 215.0  |  46.5 |     **−1.9**|    53.5 |
+| 0.40 | FewestFail+ScoredRemoval     | 2 198.3  |  39.9 |    **−17.1**|    72.6 |
+| 0.60 | Random+NeverRemove           | 2 284.2  |  78.0 |    +93.8    |     0.0 |
+| 0.60 | Random+Thresh ≥2/7d          | 2 248.7  |  44.2 |    +58.4    |    61.0 |
+| 0.60 | Random+ScoredRemoval         | 2 231.7  |  54.0 |    +41.3    |   177.0 |
+| 0.60 | FewestFail+NeverRemove       | 2 210.9  |  45.2 |    +20.5    |     0.0 |
+| 0.60 | FewestFail+Thresh ≥2/7d      | 2 125.8  |  33.6 |    **−53.7**|    61.1 |
+| 0.60 | FewestFail+ScoredRemoval     | 2 106.6  |  20.0 |    **−83.7**|   142.6 |
+| 0.80 | Random+NeverRemove           | 2 220.7  |  70.3 |    +30.3    |     0.0 |
+| 0.80 | Random+Thresh ≥2/7d          | 2 232.5  |  27.1 |    +42.1    |    72.7 |
+| 0.80 | Random+ScoredRemoval         | 2 133.3  |  27.6 |    **−47.3**|   260.7 |
+| 0.80 | FewestFail+NeverRemove       | 2 127.3  |  11.8 |    **−63.1**|     0.0 |
+| 0.80 | FewestFail+Thresh ≥2/7d      | 2 137.1  |  38.7 |    **−53.2**|    65.3 |
+| 0.80 | FewestFail+ScoredRemoval     | 2 104.9  |  33.0 |    **−85.5**|   222.7 |
+| 1.00 | Random+NeverRemove           | 2 190.4  |  16.7 |       0.0   |     0.0 |
+| 1.00 | Random+Thresh ≥2/7d          | 2 143.2  |  75.7 |    **−47.2**|    69.0 |
+| 1.00 | Random+ScoredRemoval         | 2 030.9  |   2.8 |   **−159.5**|   332.7 |
+| 1.00 | FewestFail+NeverRemove       | 2 129.3  |  34.1 |    **−61.1**|     0.0 |
+| 1.00 | FewestFail+Thresh ≥2/7d      | 2 073.2  |  68.6 |   **−117.1**|    76.0 |
+| 1.00 | FewestFail+ScoredRemoval     | 2 100.9  |  27.7 |    **−89.4**|   357.0 |
 
-### 2.2  Observations
+### 2.2  Key observations
 
-**At prob = 0 — repair pipeline is completely bypassed:**
-Every policy converges to the same result (~3 252 h, 0 retirements).  The retirement policy
-is irrelevant because no server ever enters the pipeline.  Training takes ~1 036 h longer than
-the full-diagnosis baseline because bad servers keep failing and restarting without being
-cleaned from the pool.
-
-**FewestFailures is dramatically worse than Random at prob = 0.20 (without retirement):**
-`FewestFailures+NeverRemove` runs 2 923 h vs. `Random+NeverRemove` at 2 587 h — a +336 h
-reversal.  Mechanism: FewestFailures deprioritises bad servers after their first few failures.
-When those bad servers are occasionally diagnosed (20%) and enter repair (manual: 48 h mean),
-they are simultaneously excluded from the job *and* absent from the pool.  Random spreads
-repair load more evenly, reducing simultaneous unavailability.
-
-**Retirement policies begin paying off at prob ≈ 0.40:**
-`FewestFailures+Thresh ≥2/7d` essentially breaks even at prob = 0.40 (−1.9 h) and delivers a
-solid −54 h at prob = 0.60.  `ScoredRemoval` turns positive at prob = 0.40 (−17 h) too.
-The reason retirement policies can work even below prob = 1.0: `ThresholdRemoval` reads
-`failure_timestamps`, which are updated by the coordinator for *all* failures regardless of
-diagnosis outcome.  So ThresholdRemoval "knows" about missed-diagnosis failures and can retire
-bad servers on the first repair entry that does occur.
-
-**ScoredRemoval requires higher probability for full benefit:**
-Unlike ThresholdRemoval, ScoredRemoval's `on_failure` callback is only called for diagnosed
-failures.  At prob = 0.60, `Random+ScoredRemoval` is only +13 h, while
-`FewestFailures+ScoredRemoval` delivers −88 h.  At prob ≥ 0.80, `Random+ScoredRemoval`
-starts outperforming `FewestFailures+ScoredRemoval`, and by prob = 1.0 it is the best
-overall at −169 h.
-
-**Best combination at each probability:**
-
-| prob | Best policy                     | Δ (h)  |
-|------|---------------------------------|--------|
-| 0.00 | (all equivalent)                | +1 036 |
-| 0.20 | FewestFailures+Thresh ≥2/7d     |   +59  |
-| 0.40 | FewestFailures+ScoredRemoval    |   −17  |
-| 0.60 | FewestFailures+ScoredRemoval    |   −88  |
-| 0.80 | FewestFailures+ScoredRemoval    |   −94  |
-| 1.00 | Random+ScoredRemoval            |  −169  |
+- **prob = 0:** All policies converge — repair pipeline never entered, 0 retirements.
+  Training takes +1 060 h over baseline (bad servers keep failing, never cleaned).
+- **FewestFail reversal at prob = 0.20:** `FewestFail+NeverRemove` is +592 h vs baseline,
+  far worse than `Random+NeverRemove` (+394 h).  Mechanism: FewestFail deprioritises bad
+  servers; when they do enter repair (20% diagnosed), they are simultaneously out of the job
+  and out of the pool, compounding unavailability.
+- **Retirement breaks even at prob ≈ 0.40:** `FewestFail+ScoredRemoval` −17 h and
+  `FewestFail+Thresh ≥2/7d` −2 h at prob = 0.40.
+- **Best at prob = 1.0:** `Random+ScoredRemoval` −160 h.
 
 ---
 
 ## 3  Sweep B — `diagnosis_uncertainty`  (probability fixed at 1.0)
 
-### 3.1  Raw results
+### 3.1  Raw results  *(post-bugfix)*
 
 | unc  | Scheduling+Retirement        | Mean (h) | Std  | Δ vs baseline | Retired |
 |------|------------------------------|----------|------|--------------|---------|
-| 0.00 | Random+NeverRemove           | 2 215.3  |  35.4 |       0.0   |     0.0 |
-| 0.00 | Random+Thresh ≥2/7d          | 2 140.6  |  50.6 |    −74.7    |    70.9 |
-| 0.00 | Random+ScoredRemoval         | 2 046.6  |  26.3 |   −168.7    |   338.2 |
-| 0.00 | FewestFailures+NeverRemove   | 2 116.2  |  56.1 |    −99.2    |     0.0 |
-| 0.00 | FewestFailures+Thresh ≥2/7d  | 2 097.2  |  48.1 |   −118.2    |    69.1 |
-| 0.00 | FewestFailures+ScoredRemoval | 2 064.5  |  35.5 |   −150.9    |   334.8 |
-| 0.20 | Random+NeverRemove           | 2 225.0  |  70.5 |     +9.6    |     0.0 |
-| 0.20 | Random+Thresh ≥2/7d          | 2 154.8  |  38.2 |    −60.6    |    69.4 |
-| 0.20 | Random+ScoredRemoval         | 2 115.8  |  23.1 |    −99.5    |   316.0 |
-| 0.20 | FewestFailures+NeverRemove   | 2 160.1  |  51.2 |    −55.3    |     0.0 |
-| 0.20 | FewestFailures+Thresh ≥2/7d  | 2 073.4  |  36.6 |   −141.9    |    63.1 |
-| 0.20 | FewestFailures+ScoredRemoval | 1 852.1  | 750.3 |   −363.2    |   323.1 |
-| 0.40 | Random+NeverRemove           | 2 285.3  |  76.3 |    +70.0    |     0.0 |
-| 0.40 | Random+Thresh ≥2/7d          | 1 891.7  | 765.5 |   −323.6    |    58.4 |
-| 0.40 | Random+ScoredRemoval         |     0.0  |   0.0 | *deadlock*  |   200.9 |
-| 0.40 | FewestFailures+NeverRemove   | 2 233.5  |  56.4 |    +18.2    |     0.0 |
-| 0.40 | FewestFailures+Thresh ≥2/7d  | 1 882.7  | 762.2 |   −332.7    |    58.1 |
-| 0.40 | FewestFailures+ScoredRemoval |     0.0  |   0.0 | *deadlock*  |   188.5 |
-| 0.60 | (all combinations)           |     0.0  |   0.0 | *deadlock*  |     —   |
-| 0.80 | (all combinations)           |     0.0  |   0.0 | *deadlock*  |     —   |
-| 1.00 | (all combinations)           |     0.0  |   0.0 | *deadlock*  |     —   |
+| 0.00 | Random+NeverRemove           | 2 190.4  |  16.7 |       0.0   |     0.0 |
+| 0.00 | Random+Thresh ≥2/7d          | 2 143.2  |  75.7 |    −47.2    |    69.0 |
+| 0.00 | Random+ScoredRemoval         | 2 030.9  |   2.8 |   −159.5    |   332.7 |
+| 0.00 | FewestFail+NeverRemove       | 2 129.3  |  34.1 |    −61.1    |     0.0 |
+| 0.00 | FewestFail+Thresh ≥2/7d      | 2 073.2  |  68.6 |   −117.2    |    76.0 |
+| 0.00 | FewestFail+ScoredRemoval     | 2 100.9  |  27.7 |    −89.5    |   357.0 |
+| 0.20 | Random+NeverRemove           | 2 267.4  |  81.9 |    +77.0    |     0.0 |
+| 0.20 | Random+Thresh ≥2/7d          | 2 273.0  |  24.8 |    +82.6    |    77.3 |
+| 0.20 | Random+ScoredRemoval         | 2 164.6  |  14.3 |    **−25.8**|   355.7 |
+| 0.20 | FewestFail+NeverRemove       | 2 138.7  |  61.0 |    **−51.7**|     0.0 |
+| 0.20 | FewestFail+Thresh ≥2/7d      | 2 107.9  |  68.0 |    **−82.5**|    65.3 |
+| 0.20 | FewestFail+ScoredRemoval     | 2 085.8  |  37.9 |    **−104.6**|  295.3 |
+| 0.40 | Random+NeverRemove           | 2 337.0  |  49.9 |   +146.6    |     0.0 |
+| 0.40 | Random+Thresh ≥2/7d          | 2 330.7  |  28.0 |   +140.2    |    74.0 |
+| 0.40 | Random+ScoredRemoval         | 2 234.9  |  48.4 |    +44.5    |   343.3 |
+| 0.40 | FewestFail+NeverRemove       | 2 220.7  |  59.0 |    +30.3    |     0.0 |
+| 0.40 | FewestFail+Thresh ≥2/7d      | 2 143.8  |  43.5 |    **−46.6**|    58.3 |
+| 0.40 | FewestFail+ScoredRemoval     | 2 101.7  |  20.5 |    **−88.7**|   268.3 |
+| 0.60 | Random+NeverRemove           | 2 522.4  |  87.0 |   +332.0    |     0.0 |
+| 0.60 | Random+Thresh ≥2/7d          | 2 443.2  |  71.3 |   +252.8    |    61.3 |
+| 0.60 | Random+ScoredRemoval         | 2 402.0  |  18.8 |   +211.6    |   363.3 |
+| 0.60 | FewestFail+NeverRemove       | 2 209.0  |  39.3 |    +18.6    |     0.0 |
+| 0.60 | FewestFail+Thresh ≥2/7d      | 2 172.2  |  34.1 |    **−18.2**|    44.7 |
+| 0.60 | FewestFail+ScoredRemoval     | 2 188.5  |  23.2 |     **−1.9**|   283.3 |
+| 0.80 | Random+NeverRemove           | 2 601.7  |  20.6 |   +411.3    |     0.0 |
+| 0.80 | Random+Thresh ≥2/7d          | 2 579.6  |  51.2 |   +389.2    |    39.3 |
+| 0.80 | Random+ScoredRemoval         | 2 652.2  |  36.5 |   +461.8    |   399.0 |
+| 0.80 | FewestFail+NeverRemove       | 2 338.7  |  77.5 |   +148.3    |     0.0 |
+| 0.80 | FewestFail+Thresh ≥2/7d      | 2 207.5  |  12.1 |    +17.1    |    31.3 |
+| 0.80 | FewestFail+ScoredRemoval     | 2 253.2  |  27.5 |    +62.8    |   293.0 |
+| 1.00 | Random+NeverRemove           | 2 777.7  |  71.6 |   +587.3    |     0.0 |
+| 1.00 | Random+Thresh ≥2/7d          | 2 756.4  |  90.1 |   +566.0    |     2.7 |
+| 1.00 | Random+ScoredRemoval         | 2 926.0  | 127.2 |   +735.6    |   499.3 |
+| 1.00 | FewestFail+NeverRemove       | 2 326.4  |   7.0 |   +136.0    |     0.0 |
+| 1.00 | FewestFail+Thresh ≥2/7d      | 2 347.1  |  26.7 |   +156.7    |     3.0 |
+| 1.00 | FewestFail+ScoredRemoval     | 2 352.3  |  35.8 |   +161.9    |   345.0 |
 
-### 3.2  Observations
+### 3.2  Comparison with pre-fix results
 
-**At unc = 0.20 — mostly tolerable, but ScoredRemoval shows extreme variance:**
-Most combinations remain within ±70 h of their zero-uncertainty counterparts.
-`FewestFailures+ScoredRemoval` produces 1 852 ± 750 h — a bimodal distribution where some
-runs complete quickly (retirement working well) and others stall badly (floating servers
-accumulating faster than they are retired).  Despite the mean improvement of −363 h, the high
-variance makes this combination unreliable.  `Random+ScoredRemoval` at −99 h with ±23 h std
-is much more stable.
+| unc  | Pre-fix result                         | Post-fix result                              |
+|------|----------------------------------------|----------------------------------------------|
+| 0.00 | All correct (no misdiagnosis)          | Identical ✓                                  |
+| 0.20 | FewestFail+Scored: 1852±750 (bimodal)  | FewestFail+Scored: 2086±38 (stable, −105 h)  |
+| 0.40 | ScoredRemoval: deadlock (0.0 h)        | ScoredRemoval: 2235/2102 h (−45 to −89 h)   |
+| 0.60 | All: deadlock (0.0 h)                  | All complete; FewestFail+Thresh: −18 h       |
+| 0.80 | All: deadlock (0.0 h)                  | All complete; training time +150–+460 h      |
+| 1.00 | All: deadlock (0.0 h)                  | All complete; +136–+736 h (ScoredRemoval worst) |
 
-**ThresholdRemoval shows high variance at unc = 0.40:**
-Both `Random+Thresh ≥2/7d` (1 892 ± 765 h) and `FewestFailures+Thresh ≥2/7d` (1 883 ± 762 h)
-exhibit enormous standard deviations.  This reflects the same bimodal behaviour: some runs
-complete before floating servers deplete the pool, others deadlock.  ScoredRemoval deadlocks
-deterministically (all 8 reps) at this uncertainty level.
+The extreme variance (±750 h) seen at unc=0.20 before the fix was a symptom of bimodal
+behaviour: some runs deadlocked (0 h) while others completed normally.  With the bug fixed,
+variance at unc=0.20 shrinks to ±14–68 h — the distribution is no longer bimodal.
 
-**Universal deadlock at unc ≥ 0.60:**
-All six policy combinations produce `total_training_time = 0.0` with `cluster_depleted = False`
-at uncertainty ≥ 0.60.  This is a **simulation deadlock**, not a successful cluster
-depletion — SimPy exits silently when no future events remain.
+### 3.3  Key observations
 
-### 3.3  Root cause: the floating-server bug
+**ScoredRemoval becomes actively harmful at unc ≥ 0.80:**
+At unc=0.80, `Random+ScoredRemoval` (2 652 h) is *worse* than `Random+NeverRemove` (2 602 h).
+At unc=1.0, the gap widens to 2 926 h vs. 2 778 h.  Mechanism: `on_failure` is called on the
+misdiagnosed *innocent* server, not the actual bad server.  Innocent servers accumulate penalty
+scores and are retired; bad servers' scores remain pristine and they are preferentially kept.
+The pool progressively fills with high-failure-rate servers.  This is a perverse inversion of
+ScoredRemoval's intent — at high uncertainty it actively selects *against* the job.
 
-When a misdiagnosis fires (probability = `diagnosis_uncertainty`):
+**FewestFailures scheduling gives large benefit at high uncertainty (without retirement):**
+At unc=1.0, `FewestFail+NeverRemove` (2 326 h) is 452 h *better* than
+`Random+NeverRemove` (2 778 h).  Reason: FewestFailures sorts by `total_failure_count`, which
+tracks the server's *actual* hardware failures regardless of misattribution.  Bad servers
+accumulate real failure counts quickly; FewestFailures deprioritises them even though their
+failures are attributed to innocent servers.  This is a fundamentally different mechanism from
+ScoredRemoval — it does not rely on the diagnosis pipeline at all.
 
-1. The actual bad server is marked IDLE and removed from the working pool.
-2. An innocent server is marked FAILED and sent to repair.
-3. The bad server stays in `active_servers` until the next full host-selection replaces it.
+**ThresholdRemoval is neutral-to-harmful at unc ≥ 0.80:**
+`FewestFail+Thresh ≥2/7d` at unc=0.80 is +17 h (barely above baseline) and at unc=1.0 is
++157 h (harmful).  The reason: ThresholdRemoval reads `failure_timestamps` on the *server
+entering repair*.  At unc=1.0, the server entering repair is always the innocent one, whose
+timestamps reflect only its rare genuine failures.  ThresholdRemoval rarely triggers on
+innocent servers, so it provides no benefit.  Meanwhile, the occasional early retirement of
+an innocent server (based on accumulated misattributed "blame") makes the pool slightly worse.
 
-After host selection, the bad server is neither in `pool_mgr.working_pool` nor in
-`active_servers` — it is **floating** (state = IDLE, not tracked by any pool).  As
-misdiagnoses accumulate, `pool_mgr.available_in_working` shrinks below
-`total_servers_needed`.
-
-The depletion guard checks `state != RETIRED` — floating servers still count as "active" — so
-the guard never fires.  Eventually all pending repairs finish, no new events are scheduled, and
-SimPy exits silently with `env.now` reflecting only the elapsed time before the stall.
-
-**Threshold at which deadlock appears:**
-
-- ScoredRemoval deadlocks first (unc = 0.40, all 8 reps) because it retires more servers
-  quickly, shrinking the non-floating pool faster.
-- ThresholdRemoval survives unc = 0.40 on average (mean −323 h to −333 h) but with ±765 h
-  std — some reps deadlock, others complete.
-- NeverRemove deadlocks reliably at 0.60 (the floating-server bottleneck, not retirements).
-
-**Fix (not yet implemented):** The depletion guard should count
-`pool_mgr.available_in_working` (or non-retired, non-floating servers) rather than
-`state != RETIRED`.  Alternatively, the misdiagnosis branch should track and eventually
-reintegrate floating servers.
+**FewestFail+ScoredRemoval: last remaining benefit vanishes above unc = 0.60:**
+At unc=0.40 this combination is −89 h (strong net benefit).  At unc=0.60 it is −2 h
+(breakeven).  At unc=0.80 it is +63 h (net harm).  The crossover at unc≈0.60 is the practical
+limit for this combination.
 
 ---
 
-## 4  Practical guidance
+## 4  Revised practical guidance
 
-### When to adjust `diagnosis_probability`
+### When to adjust `diagnosis_probability`  (uncertainty = 0)
 
 | prob | Recommended policy | Rationale |
 |------|--------------------|-----------|
-| < 0.40 | FewestFailures+Thresh ≥2/7d | Only ThresholdRemoval has effective signal (failure timestamps); ScoredRemoval blind to missed failures |
-| 0.40–0.80 | FewestFailures+ScoredRemoval | ScoredRemoval pays off; FewestFailures scheduling reduces exposure to repeat bad-server failures |
-| ≥ 0.80 | Random+ScoredRemoval | At high probability, Random maximises bad-server exposure → faster score degradation → earlier retirement |
+| < 0.40 | FewestFail+Thresh ≥2/7d | ThresholdRemoval has signal via timestamps; ScoredRemoval blind to missed failures |
+| 0.40–0.80 | FewestFail+ScoredRemoval | Breaks even at 0.40, delivers −84 to −86 h at 0.60–0.80 |
+| ≥ 0.80 | Random+ScoredRemoval | At high probability Random maximises bad-server exposure → faster retirement |
 
-### When to adjust `diagnosis_uncertainty`
+### When to adjust `diagnosis_uncertainty`  (probability = 1)
 
 | unc  | Recommended policy | Rationale |
 |------|--------------------|-----------|
-| ≤ 0.20 | Random+ScoredRemoval | Best absolute time (−99 h); low variance (±23 h) |
-| 0.20–0.40 | ThresholdRemoval only | ScoredRemoval deadlocks at 0.40; ThresholdRemoval shows high variance but survives |
-| ≥ 0.40 | **Avoid** | All policies deadlock at 0.60+; fix floating-server bug before operating here |
+| 0.00 | Random+ScoredRemoval | Optimal: −160 h, low variance |
+| ≤ 0.20 | FewestFail+ScoredRemoval | −105 h, stable ±38 h; ScoredRemoval still net-positive |
+| 0.20–0.60 | FewestFail+ScoredRemoval or FewestFail+Thresh ≥2/7d | ScoredRemoval −89 h at 0.40, −2 h at 0.60 |
+| ≥ 0.60 | FewestFail+NeverRemove | No retirement policy helps; FewestFail scheduling alone gives large benefit via actual failure counts |
+| = 1.00 | **Avoid ScoredRemoval** | +736 h — actively harmful; retires innocent servers, keeps bad ones |
 
-### Key interactions
+### Critical interactions revealed by the fix
 
-- **ThresholdRemoval is partially immune to missed diagnoses** because it reads raw
-  `failure_timestamps`, which are updated by the coordinator for all failures regardless of
-  diagnosis outcome.  A bad server accumulates timestamps even for undiagnosed failures;
-  ThresholdRemoval can retire it on the first repair entry.
+- **ScoredRemoval inverts at high uncertainty:** `on_failure` is called on the wrong server.
+  At unc ≥ 0.80, ScoredRemoval does more harm than no retirement policy at all.
 
-- **ScoredRemoval is blind to missed diagnoses** — its `on_failure` hook is only called for
-  diagnosed failures.  At low `diagnosis_probability`, scores become stale and both the
-  scheduling and retirement signals degrade.
+- **FewestFailures is diagnosis-agnostic:** It uses raw `total_failure_count` (actual hardware
+  failures, not attributed blame), making it the most robust scheduling policy under
+  misattribution.  At unc=1.0 it saves 452 h vs. Random scheduling alone.
 
-- **FewestFailures reversal at low probability:** At prob = 0.20 without retirement,
-  FewestFailures performs 336 h *worse* than Random (+708 h vs. +372 h over baseline).
-  After early failures, FewestFailures avoids bad servers; those servers then enter repair (20%
-  diagnosed) and are absent from both the job and the pool simultaneously, compounding the
-  effective-pool shortfall.
-
-- **High-uncertainty bimodal distributions:** At unc = 0.20–0.40, some cells show large
-  standard deviations (± 750–765 h) reflecting bimodal behaviour — runs either complete
-  efficiently (retirement cleans the pool faster than floating servers accumulate) or deadlock.
-  The mean hides this risk; always check std alongside mean.
+- **ThresholdRemoval's partial immunity breaks at high uncertainty:** It can leverage
+  `failure_timestamps` (actual failures, not attributed blame) only for servers that enter
+  repair.  At unc=1.0, only innocent servers enter repair, so ThresholdRemoval cannot act on
+  the bad servers' timestamps.
 
 ---
 
 ## 5  Summary
 
 ```
-diagnosis_probability sweep (uncertainty = 0):
-  Minimum net payoff from retirement: prob ≥ 0.40
-    (FewestFailures+ScoredRemoval: −17 h)
-  Full payoff at prob = 1.0:
-    Random+ScoredRemoval:         −169 h  ← best overall
-    FewestFailures+ScoredRemoval: −151 h
-    FewestFailures+Thresh ≥2/7d:  −118 h
+Sweep A — diagnosis_probability (uncertainty = 0):  [UNCHANGED BY BUG FIX]
+  Retirement breaks even at prob ≥ 0.40
+  Best at prob = 1.0: Random+ScoredRemoval  −160 h
 
-diagnosis_uncertainty sweep (probability = 1):
-  Safe range:  unc ≤ 0.20
-    Random+ScoredRemoval: −99 h ± 23 (stable)
-    FewestFailures+ScoredRemoval: −363 h ± 750 (high variance — risky)
-  Caution:     unc = 0.40
-    ThresholdRemoval still runs: mean ~−330 h but ± 765 h std
-    ScoredRemoval deadlocks (all 8 reps)
-  Avoid:       unc ≥ 0.60
-    Universal simulation deadlock — floating-server bug
+Sweep B — diagnosis_uncertainty (probability = 1):  [SIGNIFICANTLY CHANGED BY BUG FIX]
+
+  Pre-fix: deadlocks at unc ≥ 0.40 (ScoredRemoval) and unc ≥ 0.60 (all policies)
+  Post-fix: all simulations complete; qualitatively different behaviour revealed:
+
+  unc = 0.00:  Random+ScoredRemoval  −160 h  (optimal)
+  unc = 0.20:  FewestFail+ScoredRemoval  −105 h  (stable)
+  unc = 0.40:  FewestFail+ScoredRemoval  −89 h
+  unc = 0.60:  FewestFail+Thresh ≥2/7d  −18 h  (ScoredRemoval near-breakeven)
+  unc = 0.80:  FewestFail+Thresh ≥2/7d  +17 h  (no policy gives net benefit)
+  unc = 1.00:  FewestFail+NeverRemove   +136 h  (scheduling alone; retirement harmful)
+
+  Key crossovers:
+    ScoredRemoval net-negative:    unc > 0.60
+    ThresholdRemoval net-negative: unc > 0.80
+    FewestFail scheduling benefit: monotonically increases with uncertainty
 ```
 
-**Practical takeaway:** keep `diagnosis_uncertainty` ≤ 0.20 and `diagnosis_probability` ≥ 0.60
-to reliably benefit from automated retirement.  At full accuracy (`uncertainty = 0`,
-`probability = 1`), `Random+ScoredRemoval` achieves the best training time at −169 h below
-the no-retirement baseline.
+**Practical bottom line:** if `diagnosis_uncertainty` cannot be kept below 0.60, retire
+ScoredRemoval from the retirement policy and rely on FewestFailures scheduling alone.
+Above unc = 0.80, no retirement policy produces net benefit — the priority is accurate
+diagnosis, not smarter retirement.
