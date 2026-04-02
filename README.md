@@ -51,6 +51,7 @@ airesim/
 ├── simulator.py            # Top-level DES orchestrator — wires everything together
 ├── stats.py                # StatsCollector (per-run) and AggregateStats (multi-rep)
 ├── sweep.py                # OneWaySweep / TwoWaySweep parameter sweep drivers
+├── adaptive.py             # AdaptiveRunner — auto-determines sufficient replications
 ├── plotting.py             # Matplotlib chart helpers (optional dependency)
 ├── run.py                  # CLI entry point  (python -m airesim.run)
 └── __init__.py
@@ -109,6 +110,13 @@ See `airesim/params.py` for the full list. Key inputs:
 - `host_selection_time`, `preemption_wait_time` — overhead costs
 - `job_length`, `num_replications`, `seed`
 
+**Adaptive replication** *(all configurable via YAML/JSON)*
+- `adaptive_replications` — set to `true` to enable automatic run-count selection (default: `false`)
+- `confidence_level` — desired CI confidence, e.g. `0.95` for a 95% confidence interval (default: `0.95`)
+- `relative_accuracy` — target half-width as a fraction of the mean, e.g. `0.05` for ±5% (default: `0.05`)
+- `num_replications` — minimum number of runs before the convergence check begins (default: `30`)
+- `max_replications` — hard cap on total runs; triggers a warning if hit before convergence (default: `1000`)
+
 ## Pluggable Policies
 
 All three policy types are injected into `Simulator` at construction time:
@@ -163,6 +171,90 @@ sim = Simulator(
 )
 result = sim.run()
 ```
+
+## Adaptive Replications
+
+Instead of choosing a fixed number of replications upfront, `AdaptiveRunner`
+keeps adding runs until the confidence interval (CI) for mean training time
+satisfies a user-specified accuracy criterion:
+
+```
+half_width / mean  ≤  relative_accuracy
+```
+
+where `half_width = t_{α/2, n−1} × std / sqrt(n)` and `α` is derived from
+`confidence_level`.
+
+### Via YAML + CLI
+
+Create a YAML config file:
+
+```yaml
+# config.yaml
+job_size: 4096
+warm_standbys: 16
+working_pool_size: 4160
+spare_pool_size: 200
+seed: 42
+
+# adaptive replication settings
+confidence_level: 0.95   # 95% CI
+relative_accuracy: 0.05  # stop when half-width ≤ 5% of mean
+num_replications: 10     # run at least 10 before checking
+max_replications: 500    # never exceed 500 runs
+```
+
+Then run:
+
+```bash
+python -m airesim.run --params config.yaml --adaptive
+```
+
+Example output:
+
+```
+AIReSim — Adaptive Replication
+  confidence level : 95%
+  relative accuracy: ±5.0% of mean
+  min replications : 10
+  max replications : 500
+
+  rep    1: training_time=312.45 hrs
+  rep    2: training_time=298.71 hrs
+  ...
+  rep   47: training_time=305.18 hrs
+          CI: 307.32 ± 15.10 hrs (rel=4.9%, target=5.0%)
+
+AdaptiveRunner [CONVERGED]
+  runs              : 47
+  mean training time: 307.32 hrs
+  95% CI half-width : ±15.10 hrs (4.9% of mean)
+  target accuracy   : ±5.0% of mean
+```
+
+### Via Python API
+
+```python
+from airesim.params import Params
+from airesim.adaptive import AdaptiveRunner
+
+params = Params(
+    confidence_level=0.95,
+    relative_accuracy=0.05,
+    num_replications=10,    # minimum runs
+    max_replications=500,
+)
+runner = AdaptiveRunner(params)
+report = runner.run(verbose=True)
+
+print(report)
+print(f"Converged after {report.num_runs} runs")
+print(f"All raw results: {report.raw_results}")
+```
+
+`scipy` is used for the t-distribution quantile when available; the runner
+falls back to a normal approximation if `scipy` is not installed (accurate
+for large sample sizes).
 
 ## Running Parameter Sweeps
 
