@@ -35,6 +35,7 @@ from pathlib import Path
 
 from airesim.params import Params
 from airesim.sweep import OneWaySweep, TwoWaySweep
+from airesim.adaptive import AdaptiveRunner
 
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
@@ -107,6 +108,24 @@ def _load_params(path: str) -> Params:
         return Params(**data)
     except TypeError as exc:
         sys.exit(f"Error loading params from {path}: {exc}")
+
+
+# ── Helpers (continued) ───────────────────────────────────────────────────────
+
+def run_adaptive(base_params: Params) -> None:
+    """Run adaptive replications based on params loaded from a file."""
+    print("AIReSim — Adaptive Replication")
+    print(f"  confidence level : {base_params.confidence_level * 100:.0f}%")
+    print(f"  relative accuracy: ±{base_params.relative_accuracy * 100:.1f}% of mean")
+    print(f"  min replications : {base_params.num_replications}")
+    print(f"  max replications : {base_params.max_replications}")
+    print()
+
+    runner = AdaptiveRunner(base_params)
+    report = runner.run(verbose=True)
+
+    print()
+    print(report)
 
 
 # ── Modes ─────────────────────────────────────────────────────────────────────
@@ -252,6 +271,15 @@ def build_parser() -> argparse.ArgumentParser:
              "(fields not listed keep their defaults).",
     )
 
+    # ── Adaptive flag ────────────────────────────────────────────────────
+    parser.add_argument(
+        "--adaptive",
+        action="store_true",
+        default=False,
+        help="Run adaptive replications until the CI criterion in --params "
+             "(confidence_level, relative_accuracy) is met.  Requires --params.",
+    )
+
     return parser
 
 
@@ -279,11 +307,23 @@ def main():
     if args.values and not args.sweep:
         parser.error("--values requires --sweep.")
 
+    if args.adaptive and not args.params:
+        parser.error("--adaptive requires --params (the YAML/JSON file must "
+                     "contain confidence_level, relative_accuracy, etc.).")
+
+    if args.adaptive and args.sweep:
+        parser.error("--adaptive and --sweep are mutually exclusive.")
+
+    if args.adaptive and args.script:
+        parser.error("--adaptive and SCRIPT are mutually exclusive.")
+
     # ── Load base params (used by sweep mode; ignored in script mode) ────
     base_params = _load_params(args.params) if args.params else Params()
 
     # ── Dispatch ─────────────────────────────────────────────────────────
-    if args.script:
+    if args.adaptive:
+        run_adaptive(base_params)
+    elif args.script:
         run_script(args.script)
     elif args.sweep:
         values = _parse_values(args.values)

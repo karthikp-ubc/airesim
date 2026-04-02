@@ -62,6 +62,16 @@ class Params:
     seed: int = 42
     num_replications: int = 30
 
+    # ── Adaptive replication ─────────────────────────────────────────────────
+    # When adaptive_replications is True, the simulator keeps adding runs until
+    # the confidence interval for mean training time satisfies:
+    #   half_width / mean <= relative_accuracy
+    # num_replications is used as the minimum number of runs before checking.
+    adaptive_replications: bool = False
+    confidence_level: float = 0.95    # e.g. 0.95 for a 95 % CI
+    relative_accuracy: float = 0.05   # e.g. 0.05 for ±5 % of the mean
+    max_replications: int = 1000      # safety cap to prevent unbounded loops
+
     # ── Derived ──────────────────────────────────────────────────────────────
     @property
     def systematic_failure_rate(self) -> float:
@@ -101,6 +111,14 @@ class Params:
             raise ValueError("weibull_shape must be > 0")
         if self.lognormal_sigma <= 0:
             raise ValueError("lognormal_sigma must be > 0")
+        if not 0 < self.confidence_level < 1:
+            raise ValueError("confidence_level must be in (0, 1)")
+        if self.relative_accuracy <= 0:
+            raise ValueError("relative_accuracy must be > 0")
+        if self.max_replications < self.num_replications:
+            raise ValueError(
+                "max_replications must be >= num_replications"
+            )
 
     def with_overrides(self, **kwargs) -> "Params":
         """Return a new Params with selected fields overridden."""
