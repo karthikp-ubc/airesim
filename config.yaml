@@ -1,0 +1,161 @@
+# AIReSim simulation configuration
+#
+# Usage:
+#   python -m airesim.run --params config.yaml --adaptive
+#
+# All times are in minutes. All rates are in failures per minute.
+# Parameter defaults match the AIReSim paper (Table 1).
+
+# ── Cluster topology ──────────────────────────────────────────────────────────
+
+# Number of servers the job requires to run.
+job_size: 4096
+
+# Extra servers pre-assigned to the job so a failure causes an immediate
+# swap-in rather than a full host-selection round-trip.
+# Rule of thumb: warm_standbys ≈ expected simultaneous failures during one
+# checkpoint interval. The default (16) covers ~1 failure/hour at the cluster
+# scale modelled here.
+warm_standbys: 16
+
+# Total servers in the working pool (must be >= job_size + warm_standbys = 4112).
+# The 48-server headroom above total_servers_needed gives the scheduler room
+# to maneuver when some servers are in repair.
+working_pool_size: 4160
+
+# Servers held in a separate spare pool (running preemptible background work).
+# Drawn on when the working pool is exhausted, at a preemption cost.
+spare_pool_size: 200
+
+# ── Job parameters ────────────────────────────────────────────────────────────
+
+# Ideal job length with zero failures (minutes).
+# Default: 256 days — a typical large-model training run.
+job_length: 368640   # 256 * 24 * 60
+
+# ── Failure model ─────────────────────────────────────────────────────────────
+
+# Baseline failure rate for a healthy ("good") server (failures per minute).
+# Default implies MTBF ≈ 100 days per server.
+random_failure_rate: 6.944444e-06   # 0.01 / (24 * 60)
+
+# "Bad" servers fail this many times faster than good servers.
+# Default: 5× → MTBF ≈ 20 days per bad server.
+systematic_failure_rate_multiplier: 5.0
+
+# Fraction of the total server pool that are "bad" at simulation start.
+# Default: 15% → ~654 bad servers in a 4360-node cluster.
+systematic_failure_fraction: 0.15
+
+# Failure-time distribution: 'exponential' | 'weibull' | 'lognormal'
+# All three are mean-matched to 1 / failure_rate, so changing distribution
+# only affects variance and tail shape, not the average failure frequency.
+failure_distribution: exponential
+
+# Weibull shape parameter k (only used when failure_distribution = 'weibull').
+#   k = 1  → reduces to exponential (memoryless)
+#   k > 1  → wear-out failures (increasing hazard rate)
+#   k < 1  → infant-mortality failures (decreasing hazard rate)
+weibull_shape: 1.0
+
+# Lognormal sigma σ (only used when failure_distribution = 'lognormal').
+# Smaller σ → tighter spread around the mean; σ = 1.0 gives a moderate tail.
+lognormal_sigma: 1.0
+
+# ── Diagnosis quality ─────────────────────────────────────────────────────────
+
+# P(failure triggers a repair attempt on any server).
+# At 1.0 every failure is diagnosed; at 0.0 every failed server auto-recovers
+# without entering the repair pipeline.
+diagnosis_probability: 1.0
+
+# P(wrong server blamed | failure diagnosed).
+# At 0.0 the actual failed server is always identified correctly.
+# At 1.0 every repair is sent to a random innocent server while the bad server
+# escapes back into the working pool.
+diagnosis_uncertainty: 0.0
+
+# ── Recovery and scheduling overhead ─────────────────────────────────────────
+
+# Time to reload the checkpoint and restart the job after any failure (minutes).
+recovery_time: 20.0
+
+# Time for a host-selection round-trip before restarting the job (minutes).
+host_selection_time: 3.0
+
+# Time to preempt a job from the spare pool and move its server to working (minutes).
+preemption_wait_time: 20.0
+
+# ── Repair pipeline ───────────────────────────────────────────────────────────
+
+# Mean duration of automated repair (minutes). Default: 2 hours.
+auto_repair_time: 120.0
+
+# Mean duration of manual (human-technician) repair (minutes). Default: 2 days.
+manual_repair_time: 2880.0   # 2 * 24 * 60
+
+# P(automated repair does not fix the server → escalates to manual repair).
+# Default: 80% of auto-repair attempts escalate.
+prob_auto_to_manual: 0.80
+
+# P(auto repair reports success but the underlying fault persists).
+# The server re-enters the working pool and will fail again soon.
+auto_repair_fail_prob: 0.40
+
+# P(manual repair reports success but the underlying fault persists).
+manual_repair_fail_prob: 0.20
+
+# ── Bad-server regeneration (optional) ───────────────────────────────────────
+
+# Enable periodic conversion of good servers to bad (models hardware aging
+# or batch deployments of lower-quality nodes). Disabled by default.
+bad_server_regeneration: false
+
+# How often the regeneration process runs (minutes). Default: 30 days.
+bad_server_regen_interval: 43200   # 30 * 24 * 60
+
+# ── RNG seed ─────────────────────────────────────────────────────────────────
+
+# Base seed for all replications. Replication i uses seed + i, guaranteeing
+# independent, fully reproducible runs.
+seed: 42
+
+# ── Adaptive replication ──────────────────────────────────────────────────────
+#
+# AdaptiveRunner adds replications one at a time and stops as soon as the
+# Student-t confidence interval for mean training time satisfies:
+#
+#   half_width / mean  ≤  relative_accuracy
+#
+# where  half_width = t_{α/2, n−1} × std / sqrt(n)
+# and    α is derived from confidence_level  (e.g. 0.95 → α/2 = 0.025).
+#
+# Accuracy guide (relative_accuracy):
+#   0.10  coarse — suitable for rapid sensitivity screening
+#   0.05  standard — recommended for publication-quality results (Law & Kelton)
+#   0.02  fine — tight estimates, may require many more runs
+#   0.01  very fine — use only when a precise point estimate is essential
+
+# Enable adaptive mode (checked by the CLI --adaptive flag).
+adaptive_replications: true
+
+# Desired confidence level for the stopping CI.
+# 0.95 (95%) is the standard choice in simulation methodology.
+confidence_level: 0.95
+
+# Target relative accuracy: stop when half_width / mean ≤ this value.
+# 0.05 (±5% of the mean) is the recommended default for most studies.
+# Tighten to 0.02 for final results; loosen to 0.10 for exploratory sweeps.
+relative_accuracy: 0.05
+
+# Minimum number of replications to run before the convergence check begins.
+# 30 is the conventional threshold at which the CLT approximation is reliable
+# and the t-distribution quantile stabilises. Do not set below 10.
+num_replications: 30
+
+# Hard cap on total replications. The runner stops and reports non-convergence
+# if this limit is reached before the accuracy criterion is met.
+# 500 is sufficient for relative_accuracy = 0.05 in all standard configurations;
+# raise to 1000 if using relative_accuracy ≤ 0.02 or high-variance settings
+# (lognormal distribution, low diagnosis_probability, etc.).
+max_replications: 500
