@@ -58,6 +58,20 @@ class StatsCollector:
     def training_time_hours(self) -> float:
         return self.total_training_time / 60.0
 
+    @property
+    def effective_training_ratio(self) -> float:
+        """Fraction of total wall-clock time spent doing useful computation.
+
+        ETR = total_compute_time / total_training_time
+
+        A value of 1.0 means no time was lost to failures or overhead.
+        Lower values indicate more time lost to recovery, host selection,
+        and spare-pool waits.
+        """
+        if self.total_training_time == 0.0:
+            return 0.0
+        return self.total_compute_time / self.total_training_time
+
     def record_failure(self, is_systematic: bool) -> None:
         """Increment failure counters; distinguish random vs. systematic failures."""
         self.total_failures += 1
@@ -74,6 +88,7 @@ class StatsCollector:
         """Return a flat dict of all key metrics suitable for logging or CSV export."""
         return {
             "total_training_time_hrs": round(self.training_time_hours, 2),
+            "effective_training_ratio": round(self.effective_training_ratio, 4),
             "total_failures": self.total_failures,
             "random_failures": self.random_failures,
             "systematic_failures": self.systematic_failures,
@@ -136,10 +151,15 @@ class AggregateStats:
             return 0.0
         return sum(1 for r in self.raw_results if r.cluster_depleted) / len(self.raw_results)
 
+    def effective_training_ratio_summary(self) -> dict:
+        """Return mean/stdev/percentile stats for ETR across replications."""
+        return self._summarize([r.effective_training_ratio for r in self.raw_results])
+
     def summary_table(self) -> dict:
         """Return a dict with summaries for all key metrics."""
         return {
             "training_time_hrs": self.training_time_summary(),
+            "effective_training_ratio": self.effective_training_ratio_summary(),
             "total_failures": self.failure_count_summary(),
             "preemptions": self._summarize(self._extract("preemption_count")),
             "avg_run_duration_mins": self._summarize(

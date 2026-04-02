@@ -44,23 +44,54 @@ this to nearly 10,000 hrs.
 | Run-to-run range | 146.95 |
 | **Slowdown factor** | **1.61×** |
 | **Total overhead** | **3,721.97 hrs (37.7%)** |
+| **Effective Training Ratio (ETR)** | **62.3%** |
 
 The cluster consistently finishes the job in **9,800–9,950 hrs** (409–415 days),
 a tight band that reflects the low variance across replications.
 
 ---
 
-## 3. Time Breakdown
+## 3. Effective Training Ratio (ETR)
+
+The **Effective Training Ratio** measures the fraction of total wall-clock time
+that the cluster spends doing useful computation:
+
+```
+ETR = total_compute_time / total_training_time
+```
+
+An ETR of 1.0 means every minute of clock time advances the job; lower values
+indicate time lost to failures and their downstream costs.
+
+| Statistic | Value |
+|-----------|-------|
+| Mean ETR | **0.6228 (62.3%)** |
+| Std deviation | 0.0021 |
+| Min (worst run) | 0.6175 (61.8%) |
+| Max (best run) | 0.6268 (62.7%) |
+| Run-to-run range | 0.0093 |
+
+The ETR is **very stable** across replications (CV = 0.34%), reflecting that
+each run experiences roughly the same total number of failures and therefore
+the same aggregate recovery burden.  The ~0.9 percentage-point spread between
+the best and worst run corresponds to only ~89 hrs difference in training time.
+
+An ETR of 62.3% means **37.7% of cluster time is wasted on non-productive
+work** — almost entirely checkpoint reloading after failures.
+
+---
+
+## 4. Time Breakdown
 
 Every minute of wall-clock time falls into one of four categories:
 
-| Component | Mean (hrs) | Fraction of total |
-|-----------|-----------|-------------------|
-| Compute (job progress) | 6,144.00 | 62.3% |
-| Recovery (checkpoint reload) | 3,715.20 | 37.6% |
-| Host selection & job restart | 2.15 | 0.02% |
-| Waiting for spare pool | 4.62 | 0.05% |
-| **Total training time** | **9,865.97** | 100% |
+| Component | Mean (hrs) | Fraction of total | Contributes to ETR? |
+|-----------|-----------|-------------------|---------------------|
+| Compute (job progress) | 6,144.00 | 62.3% | Yes (numerator) |
+| Recovery (checkpoint reload) | 3,715.20 | 37.6% | No |
+| Host selection & job restart | 2.15 | 0.02% | No |
+| Waiting for spare pool | 4.62 | 0.05% | No |
+| **Total training time** | **9,865.97** | 100% | (denominator) |
 
 **Recovery time dominates the overhead at 37.6% of total wall-clock time.**
 With 11,146 failures per run and a 20-minute checkpoint reload per failure,
@@ -73,7 +104,7 @@ effectively mask most of the scheduling latency.
 
 ---
 
-## 4. Failure Analysis
+## 5. Failure Analysis
 
 ### 4.1 Total failures
 
@@ -102,7 +133,7 @@ on average — roughly twice per hour throughout the 9,866-hour run.
 
 ---
 
-## 5. Repair Pipeline
+## 6. Repair Pipeline
 
 All 11,146 failures per run enter the two-stage repair pipeline.
 
@@ -133,7 +164,7 @@ would predict.
 
 ---
 
-## 6. Scheduling and Pool Activity
+## 7. Scheduling and Pool Activity
 
 | Metric | Mean | Std Dev | Min | Max |
 |--------|------|---------|-----|-----|
@@ -152,7 +183,7 @@ would predict.
 
 ---
 
-## 7. Statistical Quality
+## 8. Statistical Quality
 
 | Metric | Value |
 |--------|-------|
@@ -172,31 +203,37 @@ within-run randomness averages out, leaving very little run-to-run variance.
 
 ---
 
-## 8. Key Findings
+## 9. Key Findings
 
-1. **Failure recovery is the dominant overhead.** At 37.6% of total time,
+1. **ETR of 62.3% — over a third of cluster time is non-productive.** The
+   Effective Training Ratio sits at 0.6228 across all 30 replications, with
+   very low variance (CV = 0.34%).  Improving ETR is the primary lever for
+   reducing total training time; every 1 percentage-point gain in ETR saves
+   ~100 hrs of wall-clock time at this cluster scale.
+
+2. **Failure recovery is the dominant overhead.** At 37.6% of total time,
    checkpoint-reload latency (`recovery_time = 20 min`) accounts for virtually
    all slowdown.  Halving recovery time would reduce total training time by
    ~1,858 hrs (~19%).
 
-2. **The repair pipeline is leaky.** A 24% net repair failure rate means the
+3. **The repair pipeline is leaky.** A 24% net repair failure rate means the
    cluster is continuously re-encountering servers that were declared healthy
    but are not.  Reducing `auto_repair_fail_prob` or `manual_repair_fail_prob`
    would reduce repeat failures and therefore total recovery time.
 
-3. **Warm standbys work as designed.** With only 43 host-selection events
+4. **Warm standbys work as designed.** With only 43 host-selection events
    across 11,146 failures, the 16-server warm-standby reserve absorbs
    ~99.6% of failures with zero scheduling overhead.
 
-4. **The spare pool is barely used.** ~14 preemptions per run from a pool of
+5. **The spare pool is barely used.** ~14 preemptions per run from a pool of
    200 servers means the spare pool provides a large safety margin that is
    rarely exercised under these parameters.
 
-5. **The cluster never depletes.** Zero stalls and zero depletion events across
+6. **The cluster never depletes.** Zero stalls and zero depletion events across
    all 30 replications confirm the configuration has sufficient resilience for
    the modelled failure rates and repair durations.
 
-6. **Systematic failures are a minor contributor.** Despite failing 5× faster,
+7. **Systematic failures are a minor contributor.** Despite failing 5× faster,
    bad servers (15% of the pool) generate only 6.2% of total failures because
    of their relatively small population share.  Increasing
    `systematic_failure_fraction` or `systematic_failure_rate_multiplier` would
@@ -204,15 +241,15 @@ within-run randomness averages out, leaving very little run-to-run variance.
 
 ---
 
-## 9. Recommendations
+## 10. Recommendations
 
-| Action | Expected effect |
-|--------|----------------|
-| Reduce `recovery_time` from 20 → 10 min | −~1,858 hrs (−18.8%) of total training time |
-| Reduce `auto_repair_fail_prob` from 0.40 → 0.20 | Fewer repeat failures → lower recovery burden |
+| Action | Expected effect on ETR |
+|--------|----------------------|
+| Reduce `recovery_time` from 20 → 10 min | ETR: ~62.3% → ~76.5% (+14 pp); saves ~1,858 hrs |
+| Reduce `auto_repair_fail_prob` from 0.40 → 0.20 | Fewer repeat failures → lower recovery burden → ETR increase |
 | Reduce `prob_auto_to_manual` from 0.80 → 0.40 | Faster average repair cycle → fewer servers in repair simultaneously |
 | Increase `warm_standbys` from 16 → 32 | Maintain near-zero host-selection overhead under higher failure rates |
-| Enable `bad_server_regeneration` | Models hardware aging; expected to gradually increase systematic failures over time |
+| Enable `bad_server_regeneration` | Models hardware aging; expected to gradually reduce ETR over time |
 
 All of these can be evaluated with a one-way sweep
 (`python -m airesim.run --sweep recovery_time --values 5,10,15,20`) or by
