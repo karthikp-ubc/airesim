@@ -37,6 +37,7 @@ expected total training time, and which parameters have the most leverage?*
 
 Sweep layer (optional):
   OneWaySweep / TwoWaySweep  →  AggregateStats  →  SweepResult
+  AdaptiveRunner             →  ConvergenceReport
   plotting.py  →  PNG charts
   run.py       →  CLI entry point
 ```
@@ -50,6 +51,18 @@ Sweep layer (optional):
 **What it does:** A single `@dataclass` holding every tunable knob for one
 simulation run (failure rates, repair times, pool sizes, job parameters, RNG seed,
 and so on).  All times are in **minutes**; all rates are in **failures per minute**.
+
+**Adaptive-replication parameters** (used by `AdaptiveRunner`):
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `adaptive_replications` | `False` | Signal that adaptive mode is desired (checked by the CLI; `AdaptiveRunner` can also be called directly regardless of this flag) |
+| `confidence_level` | `0.95` | Desired CI confidence level, e.g. `0.95` for a 95% two-sided interval |
+| `relative_accuracy` | `0.05` | Target half-width as a fraction of the mean, e.g. `0.05` for ±5% |
+| `num_replications` | `30` | Minimum runs to complete before the convergence check begins |
+| `max_replications` | `1000` | Hard cap on total runs; the runner stops and reports non-convergence if reached |
+
+All five fields are validated by `validate()` and loadable from a YAML or JSON params file.
 
 **Diagnosis parameters** (added alongside the existing `diagnosis_uncertainty`):
 
@@ -368,6 +381,58 @@ scheduler = HighestScoreFirst(scorer)
 
 ---
 
+### `adaptive.py` — `AdaptiveRunner`, `ConvergenceReport`
+
+**What it does:** Runs independent simulation replications one at a time and
+stops as soon as the Student-t confidence interval for mean training time is
+tight enough to satisfy the caller's accuracy requirement:
+
+```
+half_width / mean  ≤  params.relative_accuracy
+```
+
+where `half_width = t_{α/2, n−1} × std / sqrt(n)` and `α` comes from
+`params.confidence_level`.
+
+**`ConvergenceReport`** is the return value of `AdaptiveRunner.run()`.  It
+contains:
+
+| Field | Type | Meaning |
+|-------|------|---------|
+| `converged` | `bool` | `True` if the criterion was met before `max_replications` |
+| `num_runs` | `int` | Total replications executed |
+| `mean_training_hrs` | `float` | Sample mean of training time across all runs |
+| `ci_half_width_hrs` | `float` | Absolute half-width of the CI in hours |
+| `relative_half_width` | `float` | `ci_half_width_hrs / mean_training_hrs` |
+| `confidence_level` | `float` | The requested confidence level |
+| `relative_accuracy_target` | `float` | The requested relative accuracy |
+| `raw_results` | `list[StatsCollector]` | All per-run stats objects |
+
+**Design decisions:**
+
+- *One replication at a time.* Runs are added one by one so the check can fire
+  as soon as convergence is reached.  This avoids over-running: adding a batch
+  of N runs when only 1 was needed wastes compute, which matters for expensive
+  configurations.
+- *Student-t CI, not normal.* With small sample sizes (especially near the
+  minimum of `num_replications`) the t-distribution gives a wider, more honest
+  interval than the normal approximation.  `scipy.stats.t.ppf` is used when
+  `scipy` is available; a rational normal approximation (Abramowitz & Stegun
+  26.2.17) is used as a fallback.  The fallback is accurate to ~4.5 × 10⁻⁴,
+  adequate for the normal approximation that applies when the sample is large.
+- *`num_replications` as minimum.* Reusing the existing field avoids adding
+  yet another "min_replications" knob; the semantics change slightly
+  (from "exact count" to "lower bound") only when `adaptive_replications` is
+  active, which must be explicitly opted in to.
+- *`max_replications` as safety cap.* Without a cap a pathological configuration
+  (high variance relative to mean) could run indefinitely.  When the cap is
+  reached the runner returns a `ConvergenceReport` with `converged=False` so
+  callers can detect and handle the situation.
+- *Seed threading.* Each replication uses `params.seed + rep` for the same
+  deterministic, independent-replication guarantee as the fixed-count sweeps.
+
+---
+
 ### `sweep.py` — `OneWaySweep`, `TwoWaySweep`, `SweepResult`
 
 **What it does:** Runs a grid of `Simulator` instances across parameter values,
@@ -408,9 +473,17 @@ imported lazily inside each function so the rest of the simulator works without 
 
 ### `run.py` — CLI entry point
 
-**What it does:** Provides the `python -m airesim.run` interface with three modes:
-demo (no arguments), script (positional path to a Python sweep file), and one-way
-sweep (`--sweep` / `--values` / `--params` / `--output`).
+**What it does:** Provides the `python -m airesim.run` interface with four modes:
+
+| Mode | Invocation | Description |
+|------|-----------|-------------|
+| Demo | *(no arguments)* | Built-in recovery-time sweep to verify installation |
+| Script | `SCRIPT` positional | Load and execute a user-provided Python sweep file |
+| One-way sweep | `--sweep PARAM --values V1,V2,...` | CLI-native parameter sweep with optional `--params` and `--output` |
+| Adaptive | `--adaptive --params FILE` | Run until CI criterion in the YAML/JSON file is met |
+
+The `--adaptive` flag calls `AdaptiveRunner` with the params loaded from `--params`
+and prints a live progress line per replication followed by a `ConvergenceReport`.
 
 **Design decisions:**
 
@@ -423,6 +496,10 @@ sweep (`--sweep` / `--values` / `--params` / `--output`).
 - *Mutual-exclusion validation in `main()`* rather than using `argparse`'s
   `add_mutually_exclusive_group`.  This gives clearer error messages (e.g. "SCRIPT
   and --sweep are mutually exclusive") than argparse's generic output.
+- *`--adaptive` requires `--params`.*  Adaptive mode is only meaningful when
+  `confidence_level`, `relative_accuracy`, and the replication bounds are explicitly
+  specified in a config file; running it against hard-coded defaults would be
+  surprising.
 
 ---
 
@@ -459,6 +536,13 @@ OneWaySweep / TwoWaySweep
        ├─ summary()      — printed table
        ├─ to_csv()       — CSV string
        └─ [passed to plotting.py for charts]
+
+AdaptiveRunner
+  │  calls Simulator.run() repeatedly (seed + rep)
+  │  after each run: compute t-CI, check half_width/mean ≤ relative_accuracy
+  └─► ConvergenceReport
+       ├─ converged, num_runs, mean_training_hrs, ci_half_width_hrs
+       └─ raw_results: list[StatsCollector]
 ```
 
 ---
@@ -467,20 +551,24 @@ OneWaySweep / TwoWaySweep
 
 ```
 run.py
- └─ sweep.py ──► simulator.py ──► coordinator.py
-                │               ├─► repairs.py
-                │               ├─► scheduler.py ──► scheduling_policies.py
-                │               ├─► pool.py
-                │               ├─► server.py
-                │               ├─► params.py
-                │               ├─► stats.py
-                │               ├─► policies.py ──► scheduling_policies.py (re-export)
-                │               └─► scheduling_policies.py
-                └─ stats.py
+ ├─ sweep.py    ──► simulator.py ──► coordinator.py
+ │               │               ├─► repairs.py
+ │               │               ├─► scheduler.py ──► scheduling_policies.py
+ │               │               ├─► pool.py
+ │               │               ├─► server.py
+ │               │               ├─► params.py
+ │               │               ├─► stats.py
+ │               │               ├─► policies.py ──► scheduling_policies.py (re-export)
+ │               │               └─► scheduling_policies.py
+ │               └─ stats.py
+ └─ adaptive.py ──► simulator.py (same core, no new deps)
+                 └─► params.py, stats.py
 plotting.py (no simulator imports — consumes SweepResult only)
 ```
 
-No circular dependencies.  `policies.py` imports from `scheduling_policies.py` for
-re-export only; `scheduling_policies.py` does not import `policies.py`.
+No circular dependencies.  `adaptive.py` imports only `params.py`, `simulator.py`,
+`stats.py`, and `policies.py` (for type hints) — the same set as `sweep.py`.
+`policies.py` imports from `scheduling_policies.py` for re-export only;
+`scheduling_policies.py` does not import `policies.py`.
 `plotting.py` uses a `TYPE_CHECKING` guard so `SweepResult` is only imported for
 type checking, keeping it independent of the simulation core at runtime.
