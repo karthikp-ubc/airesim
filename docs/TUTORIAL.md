@@ -27,13 +27,25 @@ params = Params(
 sim = Simulator(params, seed=42)
 stats = sim.run()
 
-print(f"Training time : {stats.training_time_hours:.1f} hrs")
-print(f"Total failures: {stats.total_failures}")
-print(f"Auto repairs  : {stats.auto_repairs}")
-print(f"Manual repairs: {stats.manual_repairs}")
-print(f"Servers retired: {stats.servers_retired}")
-print(f"Job stalls    : {stats.job_stall_count}")
+print(f"Training time          : {stats.training_time_hours:.1f} hrs")
+print(f"Effective training ratio: {stats.effective_training_ratio:.1%}")
+print(f"Total failures         : {stats.total_failures}")
+print(f"Auto repairs           : {stats.auto_repairs}")
+print(f"Manual repairs         : {stats.manual_repairs}")
+print(f"Servers retired        : {stats.servers_retired}")
+print(f"Job stalls             : {stats.job_stall_count}")
 ```
+
+The **Effective Training Ratio (ETR)** is the fraction of total wall-clock time the
+cluster spends doing useful computation:
+
+```
+ETR = total_compute_time / total_training_time
+```
+
+An ETR of 1.0 means zero overhead; lower values indicate time lost to checkpoint
+reloading, host selection, and spare-pool waits.  It is the primary single-number
+summary of cluster efficiency.
 
 `stats.summary_dict()` returns every metric as a flat dict, useful for logging:
 
@@ -50,11 +62,14 @@ print(json.dumps(stats.summary_dict(), indent=2))
 | `warm_standbys` | 16 | Hot-spare servers kept ready for instant swap |
 | `working_pool_size` | 4160 | Total servers in the working pool |
 | `spare_pool_size` | 200 | Cold spares (preemption required to use) |
-| `random_failure_rate` | ~6.9e-7 / min | Per-server random failure rate |
+| `random_failure_rate` | ~6.9e-6 / min | Per-server random failure rate (MTBF ≈ 100 days) |
 | `recovery_time` | 20 min | Time to reload checkpoint after a failure |
 | `diagnosis_probability` | 1.0 | P(failure triggers a repair attempt on any server) |
 | `diagnosis_uncertainty` | 0.0 | P(wrong server blamed \| failure diagnosed) |
-| `seed` | 0 | RNG seed for reproducibility |
+| `adaptive_replications` | False | Enable automatic run-count selection (see §8) |
+| `confidence_level` | 0.95 | CI confidence level for adaptive stopping criterion |
+| `relative_accuracy` | 0.05 | Target half-width as fraction of mean (e.g. 0.05 = ±5%) |
+| `seed` | 42 | RNG seed for reproducibility |
 
 ---
 
@@ -88,6 +103,14 @@ result.summary()
 ```
 
 The printed table shows `mean ± stdev` training time and failure count per value.
+To inspect ETR across swept values:
+
+```python
+for agg in result.results:
+    etr = agg.effective_training_ratio_summary()
+    print(f"recovery_time={agg.param_value:3}  ETR={etr['mean']:.1%} ± {etr['stdev']:.1%}")
+```
+
 To write results to CSV:
 
 ```python
@@ -107,7 +130,20 @@ python -m airesim.run \
     --output recovery_sweep.csv
 ```
 
-Pass `--params config.json` to override base parameters from a JSON file:
+Pass `--params` to override base parameters from a JSON or YAML file.
+The repository ships a ready-to-use `config.yaml` at the project root (paper Table 1
+defaults with adaptive replication pre-configured):
+
+```bash
+# Run a sweep using the paper defaults from config.yaml
+python -m airesim.run \
+    --params config.yaml \
+    --sweep recovery_time \
+    --values 5,10,20,40 \
+    --output recovery_sweep.csv
+```
+
+Or create your own JSON override file:
 
 ```json
 {
@@ -122,7 +158,7 @@ Pass `--params config.json` to override base parameters from a JSON file:
 
 ```bash
 python -m airesim.run \
-    --params config.json \
+    --params my_config.json \
     --sweep recovery_time \
     --values 5,10,20,40 \
     --output recovery_sweep.csv
@@ -556,9 +592,154 @@ combos = [
      lambda: ScoredRemoval(100.0, 60.0, 10.0, 24*60, 0.0)),
 ]
 
-print(f"{'Scheduling':<14} {'Retirement':<12}  {'Mean (h)':>9}  {'Std':>6}")
-print("-" * 48)
+print(f"{'Scheduling':<14} {'Retirement':<12}  {'Mean (h)':>9}  {'Std':>6}  {'ETR':>6}")
+print("-" * 57)
 for sched_label, retire_label, sched_f, retire_f in combos:
-    mean, std = run_policy(sched_f, retire_f, params, N_REPS)
-    print(f"{sched_label:<14} {retire_label:<12}  {mean:>8.1f}h  {std:>5.1f}")
+    times = []
+    etrs = []
+    for rep in range(N_REPS):
+        sim = Simulator(params,
+                        host_selection_policy=sched_f(),
+                        removal_policy=retire_f(),
+                        seed=params.seed + rep)
+        s = sim.run()
+        times.append(s.training_time_hours)
+        etrs.append(s.effective_training_ratio)
+    mean = statistics.mean(times)
+    std  = statistics.stdev(times)
+    etr  = statistics.mean(etrs)
+    print(f"{sched_label:<14} {retire_label:<12}  {mean:>8.1f}h  {std:>5.1f}  {etr:>5.1%}")
 ```
+
+---
+
+## 8. Adaptive Replications
+
+Instead of choosing a fixed `num_replications` upfront, `AdaptiveRunner` keeps
+adding runs until the Student-t confidence interval for mean training time satisfies:
+
+```
+half_width / mean  ≤  relative_accuracy
+```
+
+where `half_width = t_{α/2, n−1} × std / sqrt(n)`.
+
+### Quickest path — use config.yaml
+
+The repository ships a `config.yaml` at the project root with paper-default parameters
+and adaptive replication pre-configured:
+
+```bash
+python -m airesim.run --params config.yaml --adaptive
+```
+
+This runs with `confidence_level=0.95`, `relative_accuracy=0.05` (±5% of mean),
+a minimum of 30 replications, and a cap of 500.
+
+### Python API
+
+```python
+from airesim.params import Params
+from airesim.adaptive import AdaptiveRunner
+
+params = Params(
+    job_size=64,
+    warm_standbys=8,
+    working_pool_size=80,
+    spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    seed=42,
+    # adaptive settings
+    confidence_level=0.95,   # 95% CI
+    relative_accuracy=0.05,  # stop when half-width ≤ 5% of mean
+    num_replications=10,     # minimum runs before checking
+    max_replications=200,    # safety cap
+)
+
+runner = AdaptiveRunner(params)
+report = runner.run(verbose=True)
+
+print(report)
+print(f"Converged: {report.converged} after {report.num_runs} runs")
+print(f"ETR (mean): {report.mean_training_hrs} hrs")
+```
+
+### Reading `ConvergenceReport`
+
+| Field | Meaning |
+|-------|---------|
+| `converged` | `True` if criterion met before `max_replications` |
+| `num_runs` | Total replications executed |
+| `mean_training_hrs` | Sample mean of training time |
+| `ci_half_width_hrs` | Absolute CI half-width in hours |
+| `relative_half_width` | `ci_half_width_hrs / mean_training_hrs` |
+| `raw_results` | `list[StatsCollector]` — all per-run stats |
+
+Access per-run ETR from `raw_results`:
+
+```python
+etrs = [r.effective_training_ratio for r in report.raw_results]
+import statistics
+print(f"Mean ETR: {statistics.mean(etrs):.1%}  (std: {statistics.stdev(etrs):.2%})")
+```
+
+### Accuracy guide
+
+| `relative_accuracy` | Use case |
+|---------------------|---------|
+| `0.10` | Fast exploratory screening |
+| `0.05` | Standard (recommended for publications) |
+| `0.02` | Tight estimates — expect significantly more runs |
+| `0.01` | Very fine — high-variance configs may approach `max_replications` |
+
+`scipy` is used for the t quantile when available; a normal approximation is used as
+a fallback and is accurate for large sample sizes.
+
+---
+
+## 9. Interpreting the Effective Training Ratio
+
+**ETR = `total_compute_time / total_training_time`**
+
+ETR is the primary single-number summary of cluster efficiency.  A value of 1.0 means
+every clock minute advances the job; lower values mean time is being lost to overhead.
+
+### Accessing ETR
+
+```python
+# Single run
+stats = sim.run()
+print(f"ETR: {stats.effective_training_ratio:.1%}")
+
+# From summary_dict (included automatically)
+d = stats.summary_dict()
+print(d["effective_training_ratio"])   # e.g. 0.6228
+
+# Across replications (AggregateStats)
+agg = AggregateStats(param_label="recovery_time", param_value=20, num_runs=30,
+                     raw_results=runs)
+etr_stats = agg.effective_training_ratio_summary()
+# Returns: {"mean": ..., "median": ..., "stdev": ..., "min": ..., "max": ..., "p5": ..., "p95": ...}
+print(f"Mean ETR: {etr_stats['mean']:.1%}  ±{etr_stats['stdev']:.2%}")
+
+# In summary_table
+table = agg.summary_table()
+print(table["effective_training_ratio"])
+```
+
+### What drives ETR down?
+
+| Component | Driver | How to improve |
+|-----------|--------|----------------|
+| Recovery overhead | `recovery_time`, failure count | Reduce `recovery_time`; reduce failure rates |
+| Host-selection overhead | `host_selection_time`, restart frequency | Increase `warm_standbys` to absorb more failures |
+| Spare-pool wait | Pool exhaustion | Increase `working_pool_size` or `spare_pool_size` |
+
+The paper-default configuration (`config.yaml`) achieves an ETR of **62.3%** —
+meaning 37.7% of cluster time is lost to checkpoint reloading.  Recovery time is
+the dominant term: with ~11,000 failures per run and 20 minutes per reload, recovery
+alone consumes 3,715 hrs out of 9,866 hrs total.
+
+Halving `recovery_time` from 20 → 10 min would raise ETR to approximately **76%**,
+saving ~1,858 hrs of training time.  ETR thus gives an immediately actionable
+engineering target.

@@ -369,6 +369,20 @@ scheduler = HighestScoreFirst(scorer)
 - `AggregateStats` — wraps a list of `StatsCollector` objects from multiple
   replications and computes mean / stdev / percentiles via `_summarize`.
 
+**Key derived properties on `StatsCollector`:**
+
+| Property | Formula | Meaning |
+|----------|---------|---------|
+| `training_time_hours` | `total_training_time / 60` | Wall-clock time in hours |
+| `avg_run_duration` | `mean(run_durations)` | Mean inter-failure interval (minutes) |
+| `effective_training_ratio` | `total_compute_time / total_training_time` | Fraction of wall-clock time spent doing useful computation; 1.0 = no overhead |
+
+`effective_training_ratio` (ETR) is included in `summary_dict()` (available in every
+CSV/logging export) and in `AggregateStats.effective_training_ratio_summary()` /
+`summary_table()` (available to sweep results and plotting).  ETR is the primary
+single-number summary of cluster efficiency: every percentage-point improvement in ETR
+translates directly to a proportional reduction in total training time.
+
 **Design decisions:**
 
 - *Dataclass for `StatsCollector`.* Using a dataclass with typed fields rather than
@@ -378,6 +392,9 @@ scheduler = HighestScoreFirst(scorer)
   without the sweep layer (e.g. for one-off analysis scripts).
 - *`summary_table() → dict`* provides a stable interface that the plotting layer
   queries by metric name, so new metrics can be added without changing plotting code.
+- *ETR as a computed property, not a stored field.* ETR depends on two already-stored
+  fields (`total_compute_time`, `total_training_time`), so storing it separately would
+  risk inconsistency.  Computing it on demand avoids that and costs nothing.
 
 ---
 
@@ -472,6 +489,12 @@ imported lazily inside each function so the rest of the simulator works without 
 ---
 
 ### `run.py` — CLI entry point
+
+**`config.yaml`** — the repository ships a ready-to-use YAML parameter file at the
+project root.  It contains all `Params` fields with inline comments explaining every
+knob, and has `adaptive_replications: true` pre-configured so that
+`python -m airesim.run --params config.yaml --adaptive` runs out of the box.  Users
+can copy and modify it rather than writing a Python script for simple one-off runs.
 
 **What it does:** Provides the `python -m airesim.run` interface with four modes:
 

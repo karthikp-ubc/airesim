@@ -78,10 +78,13 @@ examples/
 docs/
 ├── ARCHITECTURE.md             # This file's companion: module-by-module reference
 ├── TUTORIAL.md                 # Step-by-step guide for new users
+├── SIMULATION_REPORT.md        # Full results report from config.yaml (with ETR)
 ├── RETIREMENT_POLICY_REPORT.md # Retirement policy payoff analysis
 ├── THRESHOLD_SENSITIVITY_REPORT.md  # ThresholdRemoval crossover analysis
 ├── SCHEDULING_COMPARISON_REPORT.md  # Scheduling × retirement 3×3 experiment
 └── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality parameter sweep report
+
+config.yaml                     # Ready-to-use params file (paper defaults + adaptive settings)
 ```
 
 ## Parameters
@@ -278,10 +281,13 @@ Per simulation run (`StatsCollector`):
 
 - `total_training_time` — wall-clock simulated time to job completion (minutes)
 - `total_compute_time`, `total_recovery_time`, `total_host_selection_time`
+- `effective_training_ratio` — fraction of wall-clock time spent on useful computation: `total_compute_time / total_training_time`. A value of 1.0 means no overhead; lower values indicate time lost to recovery, host selection, and spare-pool waits.
 - `auto_repairs`, `manual_repairs`, `successful_repairs`, `failed_repairs`
 - `servers_retired`, `cluster_depleted`
 - `job_stall_count`, `host_selection_count`
 - `preemption_count`
+
+`effective_training_ratio` is included in `summary_dict()` and in `AggregateStats.summary_table()` / `effective_training_ratio_summary()`.
 
 ## Architecture
 
@@ -297,6 +303,8 @@ Key design decisions at a glance:
 | **Aggregated failure sampling** | Exponential TTFs use the min-of-exponentials shortcut (two RNG calls instead of N SimPy processes) — critical for 4 000+ server simulations |
 | **Dataclass params** | All parameters in one `Params` dataclass; `with_overrides()` creates isolated copies for sweep replications |
 | **Deterministic seeding** | Every run uses an explicit seed; `seed + rep` gives independent, reproducible replications |
+| **Adaptive replication** | `AdaptiveRunner` adds runs one at a time and stops when the Student-t CI for mean training time satisfies `half_width / mean ≤ relative_accuracy` — no need to guess `num_replications` upfront |
+| **Effective Training Ratio** | `StatsCollector.effective_training_ratio` = `compute / total` gives an interpretable single-number summary of cluster efficiency; included in `summary_dict()` and `AggregateStats.summary_table()` |
 | **Missed-signal-safe event** | The stall-wait event is owned by the main loop (checked before yield, replaced after wake) to avoid a race where repairs fire while the loop is running |
 | **Floating-server fix** | Escaped bad servers (misdiagnosis) are explicitly returned to `working_pool`; `on_server_returned` is not called (server is still in `active_servers`) to prevent duplication |
 
