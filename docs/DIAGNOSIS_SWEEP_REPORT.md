@@ -3,6 +3,7 @@
 **Regime:** 20× failure multiplier | 75% manual repair fail probability | 4 600-server pool
 **Replications per cell:** 3
 **Baseline:** Random + NeverRemove, diagnosis\_probability = 1.0, diagnosis\_uncertainty = 0.0 → **2 190 h**
+**Baseline ETR:** 336 / 2190 = **15.3%** (job\_length = 14 days = 336 hrs; ETR = 336 / training\_time)
 
 Figures: `examples/diagnosis_sweep_figures/`
 
@@ -75,7 +76,24 @@ At `diagnosis_uncertainty = 1` every diagnosed failure is attributed to a random
 | 1.00 | FewestFail+Thresh ≥2/7d      | 2 073.2  |  68.6 |   **−117.1**|    76.0 |
 | 1.00 | FewestFail+ScoredRemoval     | 2 100.9  |  27.7 |    **−89.4**|   357.0 |
 
-### 2.2  Key observations
+### 2.2  ETR summary — Sweep A
+
+ETR = 336 / mean_training_time. Values for selected configurations:
+
+| prob | Best policy | Mean (h) | ETR | Worst policy | Mean (h) | ETR |
+|------|-------------|----------|-----|--------------|----------|-----|
+| 0.00 | Random+Any | 3 251 | 10.3% | FewestFail+Any | 3 265 | 10.3% |
+| 0.20 | FewestFail+Thresh | 2 288 | 14.7% | FewestFail+NeverRemove | 2 782 | 12.1% |
+| 0.40 | FewestFail+Scored | 2 198 | 15.3% | FewestFail+NeverRemove | 2 387 | 14.1% |
+| 0.60 | FewestFail+Scored | 2 107 | 15.9% | Random+NeverRemove | 2 284 | 14.7% |
+| 0.80 | FewestFail+Scored | 2 105 | 15.9% | Random+NeverRemove | 2 221 | 15.1% |
+| 1.00 | Random+Scored | 2 031 | 16.5% | Random+NeverRemove | 2 190 | 15.3% |
+
+At `prob = 0` (no diagnosis), ETR collapses to **10.3%** — bad servers cycle continuously through
+the pool without repair, nearly doubling recovery overhead. Full diagnosis (`prob = 1`) recovers
+ETR to **16.5%** for the best policy combination.
+
+### 2.3  Key observations
 
 - **prob = 0:** All policies converge — repair pipeline never entered, 0 retirements.
   Training takes +1 060 h over baseline (bad servers keep failing, never cleaned).
@@ -132,7 +150,26 @@ At `diagnosis_uncertainty = 1` every diagnosed failure is attributed to a random
 | 1.00 | FewestFail+Thresh ≥2/7d      | 2 347.1  |  26.7 |   +156.7    |     3.0 |
 | 1.00 | FewestFail+ScoredRemoval     | 2 352.3  |  35.8 |   +161.9    |   345.0 |
 
-### 3.2  Comparison with pre-fix results
+### 3.2  ETR summary — Sweep B
+
+ETR = 336 / mean_training_time. Key ETR values by uncertainty level:
+
+| unc | Best policy | Mean (h) | ETR | Worst policy | Mean (h) | ETR |
+|-----|-------------|----------|-----|--------------|----------|-----|
+| 0.00 | Random+Scored | 2 031 | 16.5% | Random+NeverRemove | 2 190 | 15.3% |
+| 0.20 | FewestFail+Scored | 2 086 | 16.1% | Random+NeverRemove | 2 267 | 14.8% |
+| 0.40 | FewestFail+Scored | 2 102 | 16.0% | Random+NeverRemove | 2 337 | 14.4% |
+| 0.60 | FewestFail+Thresh | 2 172 | 15.5% | Random+NeverRemove | 2 522 | 13.3% |
+| 0.80 | FewestFail+NeverRemove | 2 339 | 14.4% | Random+Scored | 2 652 | 12.7% |
+| 1.00 | FewestFail+NeverRemove | 2 326 | 14.4% | Random+Scored | 2 926 | 11.5% |
+
+As misdiagnosis uncertainty rises, the **best achievable ETR falls** monotonically from 16.5%
+(unc=0) to 14.4% (unc=1). At high uncertainty, `Random+ScoredRemoval` becomes the *worst*
+policy (ETR=11.5% at unc=1.0) because it systematically retires innocent servers and keeps bad
+ones, inverting its intended effect. `FewestFailures+NeverRemove` is the most ETR-robust
+strategy across all uncertainty levels.
+
+### 3.3  Comparison with pre-fix results
 
 | unc  | Pre-fix result                         | Post-fix result                              |
 |------|----------------------------------------|----------------------------------------------|
@@ -147,7 +184,7 @@ The extreme variance (±750 h) seen at unc=0.20 before the fix was a symptom of 
 behaviour: some runs deadlocked (0 h) while others completed normally.  With the bug fixed,
 variance at unc=0.20 shrinks to ±14–68 h — the distribution is no longer bimodal.
 
-### 3.3  Key observations
+### 3.4  Key observations
 
 **ScoredRemoval becomes actively harmful at unc ≥ 0.80:**
 At unc=0.80, `Random+ScoredRemoval` (2 652 h) is *worse* than `Random+NeverRemove` (2 602 h).

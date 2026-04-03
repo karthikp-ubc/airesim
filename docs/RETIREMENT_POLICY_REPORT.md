@@ -108,15 +108,21 @@ ratio in this regime (2.4 days vs 50 days):
 
 ![Head-to-head policy comparison](../examples/scored_vs_threshold_figures/head_to_head.png)
 
-| Policy | Mean Training Time (hrs) | Δ vs NeverRemove | Servers Retired | Depleted |
-|---|---|---|---|---|
-| NeverRemove | 2208.7 ± 35.8 | — | 0 | — |
-| Thresh ≥5/7d | 2208.7 ± 35.8 | +0.0h | 0 | — |
-| Thresh ≥3/7d | 2218.4 ± 48.9 | +9.7h | 3 | — |
-| **Thresh ≥2/7d** | **2146.5 ± 49.7** | **−62.2h** | **70** | — |
-| Thresh ≥1/7d | 1004.1 ± 29.9 | −1204.6h | 696 | 100% depleted |
-| **SC_fast / SC_moderate / SC_long_period** | **2050.4 ± 28.7** | **−158.3h** | **337** | — |
-| SC_calibrated | 2159.0 ± 40.0 | −49.7h | 105 | — |
+**Effective Training Ratio (ETR)** = `job_length / total_training_time` = `336 hrs / training_time`.
+ETR measures the fraction of wall-clock time spent on useful computation; overhead (recovery,
+host selection, spare-pool waits) reduces it below 1.0.
+
+| Policy | Mean Training Time (hrs) | ETR | Δ vs NeverRemove | Servers Retired | Depleted |
+|---|---|---|---|---|---|
+| NeverRemove | 2208.7 ± 35.8 | 15.2% | — | 0 | — |
+| Thresh ≥5/7d | 2208.7 ± 35.8 | 15.2% | +0.0h | 0 | — |
+| Thresh ≥3/7d | 2218.4 ± 48.9 | 15.1% | +9.7h | 3 | — |
+| **Thresh ≥2/7d** | **2146.5 ± 49.7** | **15.6%** | **−62.2h** | **70** | — |
+| Thresh ≥1/7d | 1004.1 ± 29.9 | N/A† | −1204.6h | 696 | 100% depleted |
+| **SC_fast / SC_moderate / SC_long_period** | **2050.4 ± 28.7** | **16.4%** | **−158.3h** | **337** | — |
+| SC_calibrated | 2159.0 ± 40.0 | 15.6% | −49.7h | 105 | — |
+
+† ETR is not meaningful for depleted runs: the job did not complete, so compute time ≠ job_length.
 
 **Best ThresholdRemoval:** Thresh ≥2/7d — saves 62h, retires 70 servers.
 **Best ScoredRemoval:** SC_fast/SC_moderate/SC_long_period — saves **158h**, retires 337 servers.
@@ -144,18 +150,29 @@ lower. Training time (2159h) is better than NeverRemove but worse than the
 
 ---
 
+The ETR difference between `NeverRemove` (15.2%) and the best `ScoredRemoval` config (16.4%)
+is **+1.2 percentage points** — meaning ScoredRemoval reclaims 1.2% of wall-clock time
+that NeverRemove wastes on avoidable repeat failures from bad servers.
+
+For ETR in the multiplier and repair-probability sweeps below, use
+`ETR = 336 / (NeverRemove_time + Δ)` with the NeverRemove training time and delta from each row.
+
+---
+
 ## 5. Benefit vs Failure Rate Multiplier
 
 ![Training time benefit vs failure rate multiplier](../examples/scored_vs_threshold_figures/vs_multiplier.png)
 
-| Multiplier | Bad TTF | Best Threshold Δ | Best Scored Δ | Winner | Scored lead |
-|---|---|---|---|---|---|
-| 5× | 8.3 days | −3.9h (Thresh ≥3/7d) | −4.2h (SC_calibrated) | Scored | 0.3h |
-| 10× | 4.8 days | −17.6h (Thresh ≥2/7d) | −29.8h (SC_fast) | Scored | 12.2h |
-| 15× | 3.4 days | +1.5h (Thresh ≥2/7d) | −80.7h (SC_fast) | Scored | 82.2h |
-| 20× | 2.4 days | −62.2h (Thresh ≥2/7d) | −158.3h (SC_fast) | Scored | 96.1h |
-| 25× | 1.9 days | −85.5h (Thresh ≥2/7d) | −190.0h (SC_fast) | Scored | 104.5h |
-| 30× | 1.6 days | −85.8h (Thresh ≥2/7d) | −227.2h (SC_fast) | Scored | 141.4h |
+| Multiplier | Bad TTF | NeverRemove (hrs) | ETR (NeverRemove) | Best Scored Δ | ETR (Best Scored) | Winner | Scored lead |
+|---|---|---|---|---|---|---|---|
+| 5× | 8.3 days | ~2208.7 | 15.2% | −4.2h (SC_calibrated) | 15.3% | Scored | 0.3h |
+| 10× | 4.8 days | ~2208.7 | 15.2% | −29.8h (SC_fast) | 15.5% | Scored | 12.2h |
+| 15× | 3.4 days | ~2208.7 | 15.2% | −80.7h (SC_fast) | 16.0% | Scored | 82.2h |
+| 20× | 2.4 days | 2208.7 | 15.2% | −158.3h (SC_fast) | 16.4% | Scored | 96.1h |
+| 25× | 1.9 days | ~2285.2† | 14.7% | −190.0h (SC_fast) | 15.5% | Scored | 104.5h |
+| 30× | 1.6 days | ~2276.7† | 14.8% | −227.2h (SC_fast) | 15.7% | Scored | 141.4h |
+
+† NeverRemove times at 25× and 30× are sourced from `THRESHOLD_SENSITIVITY_REPORT.md §4.1`.
 
 ScoredRemoval leads at every multiplier tested. The lead is marginal at 5× but
 grows sharply from 10× onward. Note that at 15×, ThresholdRemoval(2/7d)
@@ -174,13 +191,15 @@ the best threshold config.
 
 ![Training time benefit vs repair fail probability](../examples/scored_vs_threshold_figures/vs_repair_fail_prob.png)
 
-| Repair fail prob | Effective fix rate | Best Threshold Δ | Best Scored Δ | Scored lead |
-|---|---|---|---|---|
-| 0.20 | 72% | −0.2h | −1.1h | 0.9h |
-| 0.40 | 56% | −18.2h | −43.9h | 25.7h |
-| 0.60 | 40% | −21.4h | −81.1h | 59.7h |
-| 0.75 | 28% | −62.2h | −158.3h | 96.1h |
-| 0.90 | 16% | −95.8h | −196.2h | 100.4h |
+| Repair fail prob | Effective fix rate | NeverRemove (hrs) | ETR (NeverRemove) | Best Scored Δ | ETR (Best Scored) | Scored lead |
+|---|---|---|---|---|---|---|
+| 0.20 | 72% | ~1909.2† | 17.6% | −1.1h | 17.7% | 0.9h |
+| 0.40 | 56% | ~2024.8† | 16.6% | −43.9h | 17.0% | 25.7h |
+| 0.60 | 40% | ~2084.0† | 16.1% | −81.1h | 16.8% | 59.7h |
+| 0.75 | 28% | 2208.7 | 15.2% | −158.3h | 16.4% | 96.1h |
+| 0.90 | 16% | ~2300.4† | 14.6% | −196.2h | 15.7% | 100.4h |
+
+† NeverRemove times for non-baseline repair probabilities are sourced from `THRESHOLD_SENSITIVITY_REPORT.md §4.2`.
 
 Both policies benefit more as repair quality degrades. The ScoredRemoval lead
 grows monotonically with fail probability, roughly doubling from 26h at 40%

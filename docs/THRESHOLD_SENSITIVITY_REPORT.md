@@ -56,6 +56,12 @@ All sweeps vary one parameter at a time from the following payoff-regime baselin
 The baseline NeverRemove time is **2215h ± 35h**.
 Thresh ≥2/7d saves **75h** (−3.4%); Thresh ≥3/7d costs **+10h** (+0.5%) at baseline.
 
+**Effective Training Ratio (ETR)** = `336 hrs (job_length) / total_training_time`.
+Baseline ETR (NeverRemove): **336 / 2215 = 15.2%**.
+With Thresh ≥2/7d: 336 / 2140 = **15.7%** (+0.5 pp).
+ETR values for all other configurations can be derived from the tables below as
+`ETR = 336 / (NeverRemove_time + Δ)`.
+
 ---
 
 ## 3. Overview
@@ -92,6 +98,10 @@ escape between windows, making ThresholdRemoval temporarily counterproductive.
 **Thresh ≥3/7d** never benefits consistently — it retires fewer than 7 servers at any
 multiplier and the signal is swamped by noise.
 
+**ETR range across multipliers:** NeverRemove ETR drops from 21.4% at 1× (low failures →
+training close to ideal) to 14.8% at 30× (high failures → heavy recovery overhead).
+Thresh ≥2/7d improves ETR by 0–0.6 pp depending on multiplier.
+
 ---
 
 ### 4.2 Manual Repair Fail Probability
@@ -113,6 +123,10 @@ returning to the pool and active retirement eliminates recidivists.
 
 **Thresh ≥3/7d** requires a manual fail probability of ≥ 0.9 to show consistent benefit,
 and can *cost* up to 36h at intermediate probabilities (0.6). At 0.75 it is harmful +10.3h.
+
+**ETR range:** NeverRemove ETR rises from 14.6% (repair fail=0.9, heavy failures) to 18.2%
+(repair fail=0.0, most servers fixed). Thresh ≥2/7d adds up to +0.6 pp at the highest fail
+probabilities where retirement is most effective.
 
 ---
 
@@ -139,6 +153,10 @@ supply — but also means retired servers have a larger proportional impact, exp
 
 **Thresh ≥3/7d crossover: +88 servers.** With only +18 headroom, the conservative policy
 barely dents the retirement problem while risking depletion; it needs more slack to be safe.
+
+**ETR:** NeverRemove ETR ranges from 14.4% (+18 headroom) to 15.8% (+688 headroom) — tighter
+pools mean more stalls and a lower ETR. Thresh ≥2/7d recovers 0.2–0.5 pp of ETR across all
+headroom levels.
 
 ---
 
@@ -167,6 +185,10 @@ The absolute training time impact grows sharply with bad-server fraction because
 server contributes ~0.18 failures/day × 60 min recovery overhead = ~11 min/day of
 wasted compute.
 
+**ETR:** NeverRemove ETR degrades from 21.2% (1% bad fraction, few failures) to 9.7% (20%
+bad fraction, severe failure load). Thresh ≥2/7d consistently recovers 0.3–1.0 pp of ETR
+across all tested bad-server fractions.
+
 ---
 
 ### 4.5 Recovery Time
@@ -192,6 +214,10 @@ is high.
 **Recovery time is the strongest continuous amplifier** of the benefit: the savings scale
 approximately proportionally to recovery time because each bad-server failure eliminates
 exactly `recovery_time` minutes of productive compute.
+
+**ETR:** NeverRemove ETR rises sharply as recovery time shrinks — from 10.8% at 90 min
+recovery to 69.1% at 5 min recovery. Thresh ≥2/7d adds 0.2–0.7 pp of ETR across the range,
+with the largest absolute hour savings (but moderate ETR gains) at long recovery times.
 
 ---
 

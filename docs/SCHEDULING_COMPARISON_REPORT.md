@@ -52,22 +52,25 @@ in the payoff regime (20× failure multiplier, 75% manual repair fail probabilit
 | Replications | 15 per cell |
 
 **Baseline (Random + NeverRemove): 2208.7 ± 35.8 hrs**
+**Baseline ETR: 336 / 2208.7 = 15.2%** (job_length = 14 days = 336 hrs)
 
 ---
 
 ## 3. Full Results Table
 
-| Scheduling | Retirement | Mean (hrs) | Std | Δ vs baseline | Retired |
-|---|---|---|---|---|---|
-| Random | NeverRemove | 2208.7 | ±35.8 | 0.0h | 0 |
-| Random | Thresh ≥2/7d | 2146.5 | ±49.7 | **−62.2h** | 70 |
-| **Random** | **ScoredRemoval** | **2050.4** | **±28.7** | **−158.3h** | **337** |
-| FewestFailures | NeverRemove | 2122.5 | ±45.2 | −86.2h | 0 |
-| FewestFailures | Thresh ≥2/7d | 2090.4 | ±40.4 | −118.3h | 68 |
-| FewestFailures | ScoredRemoval | 2065.9 | ±30.4 | −142.8h | 336 |
-| HighestScore | NeverRemove | 2122.5 | ±45.2 | −86.2h | 0 |
-| HighestScore | Thresh ≥2/7d | 2090.4 | ±40.4 | −118.3h | 68 |
-| HighestScore | ScoredRemoval | 2065.9 | ±30.4 | −142.8h | 336 |
+ETR = 336 / mean_training_time. Higher ETR = more productive compute per wall-clock hour.
+
+| Scheduling | Retirement | Mean (hrs) | ETR | Std | Δ vs baseline | Retired |
+|---|---|---|---|---|---|---|
+| Random | NeverRemove | 2208.7 | 15.2% | ±35.8 | 0.0h | 0 |
+| Random | Thresh ≥2/7d | 2146.5 | 15.6% | ±49.7 | **−62.2h** | 70 |
+| **Random** | **ScoredRemoval** | **2050.4** | **16.4%** | **±28.7** | **−158.3h** | **337** |
+| FewestFailures | NeverRemove | 2122.5 | 15.8% | ±45.2 | −86.2h | 0 |
+| FewestFailures | Thresh ≥2/7d | 2090.4 | 16.1% | ±40.4 | −118.3h | 68 |
+| FewestFailures | ScoredRemoval | 2065.9 | 16.3% | ±30.4 | −142.8h | 336 |
+| HighestScore | NeverRemove | 2122.5 | 15.8% | ±45.2 | −86.2h | 0 |
+| HighestScore | Thresh ≥2/7d | 2090.4 | 16.1% | ±40.4 | −118.3h | 68 |
+| HighestScore | ScoredRemoval | 2065.9 | 16.3% | ±30.4 | −142.8h | 336 |
 
 ---
 
@@ -87,7 +90,27 @@ in the payoff regime (20× failure multiplier, 75% manual repair fail probabilit
 
 ---
 
-## 5. Finding 1 — FewestFailuresFirst ≡ HighestScoreFirst in This Regime
+## 5. ETR Summary
+
+ETR ranges from **15.2%** (Random + NeverRemove, baseline) to **16.4%** (Random + ScoredRemoval,
+best combination) — a spread of **+1.2 percentage points** across all nine combinations.
+
+| Strategy | ETR | Interpretation |
+|---|---|---|
+| Random + NeverRemove (baseline) | 15.2% | 84.8% of time lost to failure overhead |
+| Smart scheduling alone (+NeverRemove) | 15.8% | +0.6 pp from avoiding bad servers |
+| Random + ThresholdRemoval | 15.6% | +0.4 pp from retirement alone |
+| **Random + ScoredRemoval** | **16.4%** | **+1.2 pp — best single combination** |
+| Smart scheduling + ScoredRemoval | 16.3% | +1.1 pp — antagonism costs 0.1 pp vs Random+Scored |
+
+The **antagonistic interaction** (Finding 4 below) shows up directly in ETR: combining smart
+scheduling with ScoredRemoval yields 16.3%, 0.1 pp *below* the Random + ScoredRemoval peak of
+16.4%. The best strategy for maximising ETR is therefore Random scheduling paired with aggressive
+retirement — not the intuitive combination of both levers at once.
+
+---
+
+## 6. Finding 1 — FewestFailuresFirst ≡ HighestScoreFirst in This Regime
 
 The two non-random scheduling policies produce identical results (to the last decimal
 place) across all three retirement policies.
@@ -116,7 +139,7 @@ would require either:
 
 ---
 
-## 6. Finding 2 — Smart Scheduling Without Retirement Saves 86h
+## 7. Finding 2 — Smart Scheduling Without Retirement Saves 86h
 
 Both `FewestFailuresFirst` and `HighestScoreFirst` with `NeverRemove` save **86h**
 compared to `Random + NeverRemove` (2122.5h vs 2208.7h).
@@ -134,7 +157,7 @@ comfortably staff the job (4112 needed), so the bad servers are effectively benc
 
 ---
 
-## 7. Finding 3 — `Random + ScoredRemoval` Beats All Combinations
+## 8. Finding 3 — `Random + ScoredRemoval` Beats All Combinations
 
 The best single combination is `Random + ScoredRemoval` at **2050.4h** (−158.3h vs
 baseline). Every non-random scheduling + retirement combination falls short:
@@ -152,7 +175,7 @@ baseline). Every non-random scheduling + retirement combination falls short:
 
 ---
 
-## 8. Finding 4 — Antagonistic Interaction Between Smart Scheduling and Retirement
+## 9. Finding 4 — Antagonistic Interaction Between Smart Scheduling and Retirement
 
 Adding `FewestFailuresFirst`/`HighestScoreFirst` to `ScoredRemoval` *reduces* the
 benefit by 15.5h (from −158.3h to −142.8h). This is a **counter-intuitive negative
@@ -185,7 +208,7 @@ scheduling maximises bad-server utilisation.
 
 ---
 
-## 9. The Decomposition of Savings
+## 10. The Decomposition of Savings
 
 | Strategy | Δ vs Random+NeverRemove |
 |---|---|
@@ -208,7 +231,7 @@ from −86h to −118h (+32h). Both gains are positive but sub-additive.
 
 ---
 
-## 10. Practical Guidance
+## 11. Practical Guidance
 
 | Goal | Recommended combination | Rationale |
 |---|---|---|
