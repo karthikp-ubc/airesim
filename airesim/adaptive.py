@@ -31,13 +31,13 @@ import statistics
 from dataclasses import dataclass, field
 
 from airesim.params import Params
-from airesim.simulator import Simulator
-from airesim.stats import StatsCollector
 from airesim.policies import (
     HostSelectionPolicy,
     RepairEscalationPolicy,
     ServerRemovalPolicy,
 )
+from airesim.simulator import Simulator
+from airesim.stats import StatsCollector
 
 
 def _t_quantile(p: float, df: int) -> float:

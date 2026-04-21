@@ -2,20 +2,18 @@
 
 from __future__ import annotations
 
+import os
 import random
 import sys
-import os
 
 import simpy
-import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from airesim.server import Server, ServerState
-from airesim.policies import ScoredRemoval, NeverRemove
 from airesim.params import Params
+from airesim.policies import NeverRemove, ScoredRemoval
+from airesim.server import Server
 from airesim.simulator import Simulator
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -324,7 +322,9 @@ class TestScoredRemovalIntegration:
             seed=99,
             num_replications=1,
         )
-        never_result = Simulator(params=Params(**common), removal_policy=NeverRemove(), seed=99).run()
+        never_result = Simulator(
+            params=Params(**common), removal_policy=NeverRemove(), seed=99
+        ).run()
         scored_result = Simulator(
             params=Params(**common),
             removal_policy=ScoredRemoval(

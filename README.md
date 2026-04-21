@@ -11,18 +11,31 @@ cluster utilization.
 ## Quick Start
 
 ```bash
-pip install simpy matplotlib numpy
+pip install -e ".[dev]"                              # installs simpy, matplotlib, pytest, ruff
 python -m airesim.run examples/paper_table1_sweep.py
 ```
 
 ## Running the Tests
 
 ```bash
-pip install pytest
 pytest tests/
 ```
 
 79 tests across 5 test modules, all passing.
+
+## Linting
+
+[ruff](https://docs.astral.sh/ruff/) enforces PEP 8, import order, and unused-import rules
+(rule sets E, W, F, I) with a 100-character line limit — matching the guidelines in
+[`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+```bash
+ruff check airesim/ tests/       # check
+ruff check airesim/ tests/ --fix  # auto-fix safe issues
+```
+
+Both `pytest` and `ruff check` run automatically on every push and pull request via
+`.github/workflows/test.yml`.
 
 | Test file | What it covers |
 |-----------|---------------|
@@ -82,7 +95,8 @@ docs/
 ├── RETIREMENT_POLICY_REPORT.md # Retirement policy payoff analysis
 ├── THRESHOLD_SENSITIVITY_REPORT.md  # ThresholdRemoval crossover analysis
 ├── SCHEDULING_COMPARISON_REPORT.md  # Scheduling × retirement 3×3 experiment
-└── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality parameter sweep report
+├── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality parameter sweep report
+└── 2D-HEAT_MAP_REPORT.md       # 2D heatmap sweep results
 
 config.yaml                     # Ready-to-use params file (paper defaults + adaptive settings)
 ```

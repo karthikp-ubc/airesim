@@ -15,8 +15,8 @@ from typing import TYPE_CHECKING
 
 import simpy
 
-from airesim.server import Server
 from airesim.policies import RepairEscalationPolicy, ServerRemovalPolicy
+from airesim.server import Server
 
 if TYPE_CHECKING:
     from airesim.pool import PoolManager
@@ -25,6 +25,8 @@ if TYPE_CHECKING:
 
 @dataclass
 class RepairResult:
+    """Outcome record returned after a server completes the full repair pipeline."""
+
     server: Server
     went_to_manual: bool
     repair_succeeded: bool  # whether the underlying issue was actually fixed

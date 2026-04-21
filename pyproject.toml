@@ -18,6 +18,7 @@ plot = ["matplotlib>=3.5"]
 dev = [
     "matplotlib>=3.5",
     "pytest>=7.0",
+    "ruff>=0.4",
 ]
 
 [project.scripts]
@@ -25,3 +26,13 @@ airesim = "airesim.run:main"
 
 [tool.setuptools.packages.find]
 include = ["airesim*"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/*" = ["F841"]   # unused local variables are common in test scaffolding

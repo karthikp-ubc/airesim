@@ -14,20 +14,16 @@ which was already present.
 
 from __future__ import annotations
 
-import random
-import sys
 import os
+import sys
 
-import simpy
 import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from airesim.params import Params
+from airesim.policies import ScoredRemoval, ThresholdRemoval
 from airesim.simulator import Simulator
-from airesim.policies import NeverRemove, ThresholdRemoval, ScoredRemoval
-from airesim.server import Server, ServerState
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

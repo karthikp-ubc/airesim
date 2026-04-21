@@ -16,9 +16,9 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from airesim.params import Params
-from airesim.simulator import Simulator
-from airesim.stats import StatsCollector, AggregateStats
 from airesim.policies import HostSelectionPolicy, RepairEscalationPolicy, ServerRemovalPolicy
+from airesim.simulator import Simulator
+from airesim.stats import AggregateStats, StatsCollector
 
 
 @dataclass
@@ -32,7 +32,7 @@ class SweepResult:
     # For two-way sweeps
     param2_name: str | None = None
 
-    def summary(self, file=None) -> None:
+    def summary(self, file: io.TextIOBase | None = None) -> None:
         """Print a summary table to stdout or a file."""
         out = file or sys.stdout
         print(f"\n{'='*70}", file=out)

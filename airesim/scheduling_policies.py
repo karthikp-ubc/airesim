@@ -12,8 +12,8 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from airesim.server import Server
     from airesim.policies import ScoredRemoval
+    from airesim.server import Server
 
 
 class HostSelectionPolicy(ABC):
@@ -39,7 +39,13 @@ class HostSelectionPolicy(ABC):
 class DefaultHostSelection(HostSelectionPolicy):
     """Select servers randomly (uniform) from the available pool."""
 
-    def select(self, available_servers, job_size, warm_standbys, rng):
+    def select(
+        self,
+        available_servers: list["Server"],
+        job_size: int,
+        warm_standbys: int,
+        rng: random.Random,
+    ) -> list["Server"]:
         """Shuffle the available pool and return the first ``job_size + warm_standbys`` servers."""
         needed = job_size + warm_standbys
         chosen = available_servers[:needed]  # pool is already shuffled or ordered
@@ -50,7 +56,13 @@ class DefaultHostSelection(HostSelectionPolicy):
 class FewestFailuresFirst(HostSelectionPolicy):
     """Prefer servers with the fewest historical failures."""
 
-    def select(self, available_servers, job_size, warm_standbys, rng):
+    def select(
+        self,
+        available_servers: list["Server"],
+        job_size: int,
+        warm_standbys: int,
+        rng: random.Random,
+    ) -> list["Server"]:
         """Sort by ascending total failure count (random tiebreak) and return the top servers."""
         needed = job_size + warm_standbys
         sorted_servers = sorted(
@@ -80,7 +92,13 @@ class HighestScoreFirst(HostSelectionPolicy):
     def __init__(self, scored_removal: "ScoredRemoval") -> None:
         self.scored_removal = scored_removal
 
-    def select(self, available_servers, job_size, warm_standbys, rng):
+    def select(
+        self,
+        available_servers: list["Server"],
+        job_size: int,
+        warm_standbys: int,
+        rng: random.Random,
+    ) -> list["Server"]:
         """Sort by descending reliability score (random tiebreak) and return the top servers."""
         needed = job_size + warm_standbys
         sorted_servers = sorted(

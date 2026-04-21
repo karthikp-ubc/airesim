@@ -26,5 +26,8 @@ jobs:
       - name: Install dependencies
         run: pip install -e ".[dev]"
 
+      - name: Lint
+        run: ruff check airesim/ tests/
+
       - name: Run tests
         run: pytest tests/ -v --tb=short

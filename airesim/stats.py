@@ -6,7 +6,6 @@ AggregateStats computes summary statistics across multiple replications.
 
 from __future__ import annotations
 
-import math
 import statistics
 from dataclasses import dataclass, field
 
@@ -50,12 +49,14 @@ class StatsCollector:
 
     @property
     def avg_run_duration(self) -> float:
+        """Mean time between failures across all run chunks in this replication."""
         if not self.run_durations:
             return 0.0
         return statistics.mean(self.run_durations)
 
     @property
     def training_time_hours(self) -> float:
+        """Total wall-clock training time converted from minutes to hours."""
         return self.total_training_time / 60.0
 
     @property
@@ -132,7 +133,7 @@ class AggregateStats:
         }
 
     def training_time_summary(self) -> dict:
-        """Return mean/stdev/percentile stats for total training time (hours) across replications."""
+        """Return mean/stdev/percentile stats for training time (hours) across replications."""
         times = [r.training_time_hours for r in self.raw_results]
         return self._summarize(times)
 

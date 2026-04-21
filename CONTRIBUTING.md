@@ -19,7 +19,7 @@ git clone <repo-url>
 cd airesim
 python -m venv .venv
 source .venv/bin/activate      # Windows: .venv\Scripts\activate
-pip install -e ".[dev]"        # installs simpy + matplotlib + pytest
+pip install -e ".[dev]"        # installs simpy + matplotlib + pytest + ruff
 ```
 
 ---
@@ -27,18 +27,20 @@ pip install -e ".[dev]"        # installs simpy + matplotlib + pytest
 ## Running the tests
 
 ```bash
-pytest tests/
+ruff check airesim/ tests/   # lint — must pass before opening a PR
+pytest tests/                # tests — must pass before opening a PR
 ```
 
-All tests should pass before you open a pull request.  The CI workflow runs the
-suite on Python 3.10, 3.11, and 3.12 — please check that your changes do not
-introduce version-specific issues.
+Both steps run in CI on Python 3.10, 3.11, and 3.12.  Please verify locally
+before opening a pull request.
 
 ---
 
 ## Code conventions
 
 - **Style:** follow PEP 8.  Line length ≤ 100 characters.
+  [`ruff`](https://docs.astral.sh/ruff/) enforces this automatically — run
+  `ruff check airesim/ tests/` before committing.
 - **Types:** add type annotations to all new public functions and methods.
 - **Docstrings:** every public class, method, and function should have a docstring.
   One-liners are fine for simple methods; use the Args/Returns style for anything
@@ -84,6 +86,7 @@ See `docs/TUTORIAL.md` §3 for a worked example.
 
 ## Pull request checklist
 
+- [ ] `ruff check airesim/ tests/` passes locally
 - [ ] `pytest tests/` passes locally
 - [ ] New or changed behaviour is covered by tests
 - [ ] Docstrings added/updated for all touched public methods

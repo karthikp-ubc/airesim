@@ -33,10 +33,9 @@ import json
 import sys
 from pathlib import Path
 
+from airesim.adaptive import AdaptiveRunner
 from airesim.params import Params
 from airesim.sweep import OneWaySweep, TwoWaySweep
-from airesim.adaptive import AdaptiveRunner
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -61,7 +60,8 @@ def _parse_values(values_str: str) -> list[int | float]:
             # Use int only when the token parses cleanly as one (no dot/e)
             as_float = float(token)
             as_int = int(as_float)
-            result.append(as_int if as_int == as_float and "." not in token and "e" not in token.lower() else as_float)
+            is_int = as_int == as_float and "." not in token and "e" not in token.lower()
+            result.append(as_int if is_int else as_float)
         except ValueError:
             raise argparse.ArgumentTypeError(
                 f"Cannot parse {token!r} as a number in --values"

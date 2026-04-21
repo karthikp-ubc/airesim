@@ -15,25 +15,21 @@ Covers three specific bugs found in simulator.py:
       event.
 """
 
+import os
 import random
 import sys
-import os
 
 import simpy
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from airesim.server import Server, ServerState
-from airesim.pool import PoolManager
-from airesim.scheduler import Scheduler
-from airesim.repairs import RepairShop
-from airesim.coordinator import Coordinator
-from airesim.stats import StatsCollector
 from airesim.params import Params
+from airesim.policies import DefaultRepairEscalation, NeverRemove
+from airesim.pool import PoolManager
+from airesim.repairs import RepairShop
+from airesim.server import Server, ServerState
 from airesim.simulator import Simulator
-from airesim.scheduling_policies import DefaultHostSelection
-from airesim.policies import NeverRemove, DefaultRepairEscalation
-
+from airesim.stats import StatsCollector
 
 # ── helpers ──────────────────────────────────────────────────────────────────
 
@@ -81,7 +77,9 @@ def test_repaired_server_added_to_warm_standbys():
     observed = {}
 
     class InspectingSim(Simulator):
-        def _main_loop(self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers):
+        def _main_loop(  # noqa: PLR0913
+            self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers
+        ):
             observed["scheduler"] = scheduler
             observed["repair_shop"] = repair_shop
             yield from super()._main_loop(
@@ -194,7 +192,9 @@ def test_misdiagnosis_real_failed_server_state_is_idle():
     captured = {}
 
     class InspectingSim(Simulator):
-        def _main_loop(self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers):
+        def _main_loop(  # noqa: PLR0913
+            self, env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers
+        ):
             remaining = p.job_length
             scheduler.do_host_selection()
             yield env.timeout(p.host_selection_time)

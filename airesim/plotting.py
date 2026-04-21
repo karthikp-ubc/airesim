@@ -86,11 +86,14 @@ def plot_two_way_sweep(
         save_path: If provided, save figure to this path.
     """
     import matplotlib.pyplot as plt
-    import numpy as np
 
     # Extract unique param2 values for the legend
-    param2_vals = sorted(set(v[1] for agg in result.results for v in [agg.param_value] if isinstance(v, tuple)))
-    param1_vals = sorted(set(v[0] for agg in result.results for v in [agg.param_value] if isinstance(v, tuple)))
+    param2_vals = sorted(
+        set(v[1] for agg in result.results for v in [agg.param_value] if isinstance(v, tuple))
+    )
+    param1_vals = sorted(
+        set(v[0] for agg in result.results for v in [agg.param_value] if isinstance(v, tuple))
+    )
 
     if not param2_vals or not param1_vals:
         print("Warning: Could not parse two-way sweep structure for plotting.")
@@ -219,8 +222,8 @@ def plot_tornado_chart(
         save_path: If provided, save the figure to this path.
         max_params: Show at most this many parameters (top by range).
     """
-    import matplotlib.pyplot as plt
     import matplotlib.patches as mpatches
+    import matplotlib.pyplot as plt
 
     # Keep top-N by range; draw highest-impact at the top of the chart.
     display = sorted(rows, key=lambda r: r["range"], reverse=True)[:max_params]

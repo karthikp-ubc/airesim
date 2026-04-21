@@ -17,12 +17,11 @@ if TYPE_CHECKING:
 
 # Re-export scheduling policies so existing imports continue to work.
 from airesim.scheduling_policies import (  # noqa: F401
-    HostSelectionPolicy,
     DefaultHostSelection,
     FewestFailuresFirst,
     HighestScoreFirst,
+    HostSelectionPolicy,
 )
-
 
 # ── Repair escalation ────────────────────────────────────────────────────────
 
@@ -30,7 +29,9 @@ class RepairEscalationPolicy(ABC):
     """Decide whether a server should be escalated from auto to manual repair."""
 
     @abstractmethod
-    def should_escalate(self, server: "Server", auto_repair_succeeded: bool, rng: random.Random) -> bool:
+    def should_escalate(
+        self, server: "Server", auto_repair_succeeded: bool, rng: random.Random
+    ) -> bool:
         """Return True if the server should go to manual repair."""
         ...
 
@@ -42,7 +43,12 @@ class DefaultRepairEscalation(RepairEscalationPolicy):
     def __init__(self, prob_escalate: float = 0.80):
         self.prob_escalate = prob_escalate
 
-    def should_escalate(self, server, auto_repair_succeeded, rng):
+    def should_escalate(
+        self,
+        server: "Server",
+        auto_repair_succeeded: bool,
+        rng: random.Random,
+    ) -> bool:
         """Return True with probability ``prob_escalate`` when auto repair failed."""
         if auto_repair_succeeded:
             return False
@@ -91,7 +97,7 @@ class ServerRemovalPolicy(ABC):
 class NeverRemove(ServerRemovalPolicy):
     """Never permanently remove servers (always reintegrate after repair)."""
 
-    def should_remove(self, server, rng):
+    def should_remove(self, server: "Server", rng: random.Random) -> bool:
         """Always return False — every repaired server is returned to the working pool."""
         return False
 
@@ -157,7 +163,7 @@ class ThresholdRemoval(ServerRemovalPolicy):
         self.max_failures = max_failures
         self.window_minutes = window_minutes
 
-    def should_remove(self, server, rng):
+    def should_remove(self, server: "Server", rng: random.Random) -> bool:
         """Return True if the server has reached ``max_failures`` within the rolling window."""
         recent = server.failures_in_window(self.window_minutes)
         return recent >= self.max_failures

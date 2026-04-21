@@ -15,6 +15,8 @@ if TYPE_CHECKING:
 
 
 class ServerState(enum.Enum):
+    """Lifecycle states for a single server node."""
+
     IDLE = "idle"                      # in pool, available
     RUNNING = "running"                # executing AI job
     FAILED = "failed"                  # has failed, awaiting repair

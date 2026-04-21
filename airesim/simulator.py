@@ -8,24 +8,23 @@ This is the main orchestration loop that implements Figure 1 from the paper:
 from __future__ import annotations
 
 import random
-from typing import TYPE_CHECKING
 
 import simpy
 
-from airesim.params import Params
-from airesim.server import Server, ServerState
 from airesim.coordinator import Coordinator
-from airesim.scheduler import Scheduler
-from airesim.repairs import RepairShop
-from airesim.pool import PoolManager
-from airesim.stats import StatsCollector
-from airesim.scheduling_policies import DefaultHostSelection, HostSelectionPolicy
+from airesim.params import Params
 from airesim.policies import (
     DefaultRepairEscalation,
     NeverRemove,
     RepairEscalationPolicy,
     ServerRemovalPolicy,
 )
+from airesim.pool import PoolManager
+from airesim.repairs import RepairShop
+from airesim.scheduler import Scheduler
+from airesim.scheduling_policies import DefaultHostSelection, HostSelectionPolicy
+from airesim.server import Server, ServerState
+from airesim.stats import StatsCollector
 
 
 class Simulator:
@@ -124,7 +123,9 @@ class Simulator:
         repair_shop.on_server_returned = scheduler.return_server_to_job
 
         # ── Start the main simulation process ────────────────────────────
-        env.process(self._main_loop(env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers))
+        env.process(self._main_loop(
+            env, rng, p, coordinator, scheduler, repair_shop, pool_mgr, stats, all_servers
+        ))
 
         # Optionally: bad-server regeneration process
         if p.bad_server_regeneration:
@@ -161,7 +162,7 @@ class Simulator:
                     if pool_mgr.spare_pool:
                         yield env.timeout(p.preemption_wait_time)
                         stats.total_wait_time += p.preemption_wait_time
-                        moved = pool_mgr.move_spare_to_working()
+                        pool_mgr.move_spare_to_working()
                     else:
                         # No spares — stall and wait for repair.
                         # Check triggered before yielding to avoid the missed-
@@ -311,8 +312,12 @@ class Simulator:
         while True:
             yield env.timeout(p.bad_server_regen_interval)
             # Pick some good servers and make them bad
-            good_servers = [s for s in all_servers if not s.is_bad and s.state != ServerState.RETIRED]
+            good_servers = [
+                s for s in all_servers if not s.is_bad and s.state != ServerState.RETIRED
+            ]
             if good_servers:
-                num_to_convert = max(1, int(len(good_servers) * p.systematic_failure_fraction * 0.1))
+                num_to_convert = max(
+                    1, int(len(good_servers) * p.systematic_failure_fraction * 0.1)
+                )
                 for s in rng.sample(good_servers, min(num_to_convert, len(good_servers))):
                     s.make_bad()

@@ -1,24 +1,24 @@
 """Tests for AIReSim core components."""
 
-import random
-import simpy
-import sys
 import os
+import random
+import sys
 import time
+
+import simpy
 
 # Add parent dir to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from airesim.params import Params
-from airesim.server import Server, ServerState
-from airesim.pool import PoolManager
 from airesim.coordinator import Coordinator
-from airesim.simulator import Simulator
-from airesim.stats import StatsCollector, AggregateStats
-from airesim.sweep import OneWaySweep
-from airesim.scheduling_policies import DefaultHostSelection, FewestFailuresFirst
+from airesim.params import Params
 from airesim.policies import ThresholdRemoval
-
+from airesim.pool import PoolManager
+from airesim.scheduling_policies import FewestFailuresFirst
+from airesim.server import Server, ServerState
+from airesim.simulator import Simulator
+from airesim.stats import AggregateStats, StatsCollector
+from airesim.sweep import OneWaySweep
 
 # ── Params tests ─────────────────────────────────────────────────────────────
 
@@ -209,7 +209,6 @@ def test_coordinator_job_completes():
 
 def test_coordinator_bad_server_more_likely_to_fail():
     """Bad servers should fail more often than good servers."""
-    rng = random.Random(42)
     bad_count = 0
     good_count = 0
     trials = 500
@@ -380,7 +379,7 @@ def test_threshold_removal():
     policy = ThresholdRemoval(max_failures=5, window_minutes=7 * 24 * 60)
 
     env.run(until=now)
-    assert policy.should_remove(s, rng) == True
+    assert policy.should_remove(s, rng)
     print("  [PASS] test_threshold_removal")
 
 

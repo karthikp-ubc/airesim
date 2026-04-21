@@ -11,8 +11,8 @@ from typing import TYPE_CHECKING
 
 import simpy
 
-from airesim.server import Server, ServerState
 from airesim.scheduling_policies import HostSelectionPolicy
+from airesim.server import Server, ServerState
 
 if TYPE_CHECKING:
     from airesim.pool import PoolManager

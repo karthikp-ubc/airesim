@@ -6,8 +6,7 @@ All rates are in **failures per minute** unless stated otherwise.
 
 from __future__ import annotations
 
-import copy
-from dataclasses import dataclass, field, fields, replace
+from dataclasses import dataclass, fields, replace
 
 
 @dataclass

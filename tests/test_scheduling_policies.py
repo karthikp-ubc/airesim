@@ -2,25 +2,21 @@
 
 from __future__ import annotations
 
+import os
 import random
 import sys
-import os
 
 import simpy
-import pytest
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from airesim.server import Server
+from airesim.params import Params
+from airesim.policies import ScoredRemoval
 from airesim.scheduling_policies import (
-    DefaultHostSelection,
-    FewestFailuresFirst,
     HighestScoreFirst,
 )
-from airesim.policies import ScoredRemoval, NeverRemove
-from airesim.params import Params
+from airesim.server import Server
 from airesim.simulator import Simulator
-
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 

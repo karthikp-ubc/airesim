@@ -4,6 +4,51 @@ All notable changes to AIReSim are recorded here.
 
 ---
 
+## [Unreleased] — 2026-04-21
+
+### Code Quality
+
+#### Consistency pass: type annotations, docstrings, and line length
+
+**Affected files:** `airesim/server.py`, `airesim/repairs.py`, `airesim/stats.py`,
+`airesim/scheduling_policies.py`, `airesim/policies.py`, `airesim/sweep.py`,
+`airesim/simulator.py`, `airesim/run.py`, `airesim/plotting.py`
+
+Applied fixes to conform to the CONTRIBUTING.md guidelines (PEP 8, ≤100-char lines,
+type annotations on all public functions, docstrings on all public items):
+
+- Added docstrings to `ServerState` enum, `RepairResult` dataclass, and
+  `StatsCollector.avg_run_duration` / `training_time_hours` properties.
+- Added full type annotations (parameters + return types) to all concrete
+  `select()` overrides in `scheduling_policies.py` and to the `should_escalate()`
+  and `should_remove()` overrides in `policies.py`.
+- Added `file: io.TextIOBase | None` type annotation to `SweepResult.summary()`.
+- Broke 8 lines that exceeded 100 characters across `simulator.py`, `run.py`,
+  `plotting.py`, `stats.py`, and `policies.py`.
+
+#### Linter: ruff added for automatic style enforcement
+
+**Affected files:** `pyproject.toml`, `.github/workflows/test.yml`
+
+`ruff` (rules E, W, F, I — PEP 8 errors/warnings, unused imports, import
+sorting) is now configured in `pyproject.toml` and runs as a CI step before
+the test suite on every push and pull request.
+
+Applied all violations ruff found in the existing codebase:
+- Removed unused imports (`copy`, `field` in `params.py`; `numpy` in
+  `plotting.py`; `pytest`, `DefaultHostSelection`, `FewestFailuresFirst`,
+  `NeverRemove`, `ServerState` in test files).
+- Sorted import blocks in all source and test modules (`I001`).
+- Removed unused local assignments (`moved` in `simulator.py`; `rng` in
+  `test_airesim.py`).
+- Replaced `== True` boolean comparison with a bare truth check in
+  `test_airesim.py` (`E712`).
+
+`ruff` is added to the `[project.optional-dependencies] dev` group so
+`pip install -e ".[dev]"` installs it automatically.
+
+---
+
 ## [Unreleased] — 2026-03-30
 
 ### Bug Fixes
