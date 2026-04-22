@@ -743,3 +743,51 @@ alone consumes 3,715 hrs out of 9,866 hrs total.
 Halving `recovery_time` from 20 → 10 min would raise ETR to approximately **76%**,
 saving ~1,858 hrs of training time.  ETR thus gives an immediately actionable
 engineering target.
+
+---
+
+## 10. Calibrating Parameters from Your Own Cluster Logs
+
+The default values in `config.yaml` are illustrative (see the paper, Table 1).
+To apply AIReSim to your own cluster, estimate the key parameters from your
+operational logs as follows.
+
+### Parameter estimation recipes
+
+| Parameter | How to estimate from logs |
+|---|---|
+| `random_failure_rate` | Compute mean time between failures (MTBF) for the bulk of your fleet (excluding repeat offenders): `MTBF_minutes = total_uptime_minutes / failure_count`. Then `random_failure_rate = 1 / MTBF_minutes`. |
+| `systematic_failure_fraction` | Rank servers by failure count over a representative window (e.g. 90 days). The fraction of servers that account for a disproportionate share of failures (e.g. top 10–20% of servers contributing >50% of failures) is your `systematic_failure_fraction`. |
+| `systematic_failure_rate_multiplier` | Compute the mean failure rate of the high-failure servers identified above, divided by the mean failure rate of the rest of the fleet. A value of 5–10× is typical in practice. |
+| `recovery_time` | Measure the mean elapsed time (in minutes) between a failure event timestamp and the job-resumed timestamp in your job scheduler logs. |
+| `auto_repair_time` | Mean duration of repair tickets closed without human escalation, in minutes. |
+| `manual_repair_time` | Mean duration of repair tickets that required human intervention, in minutes. |
+| `prob_auto_to_manual` | Fraction of repair tickets escalated from automated to manual repair. |
+| `auto_repair_fail_prob` / `manual_repair_fail_prob` | Fraction of completed repair tickets where the same server failed again within a short window (e.g. 7 days), suggesting the repair did not resolve the underlying issue. |
+
+### Worked example
+
+Suppose your logs show: 500 failures across 4,000 servers over 90 days
+(129,600 minutes), with 50 servers accounting for 300 of those failures.
+
+```python
+total_uptime   = 4000 * 129600          # all server-minutes
+failure_count  = 500 - 300              # failures on "good" servers only
+random_failure_rate = failure_count / total_uptime   # ≈ 3.9e-7 / min
+
+systematic_failure_fraction = 50 / 4000              # = 0.0125
+
+good_rate = (500 - 300) / (3950 * 129600)
+bad_rate  = 300         / (50   * 129600)
+systematic_failure_rate_multiplier = bad_rate / good_rate   # ≈ 30×
+```
+
+Plug these values into `config.yaml` in place of the defaults, then run a
+sweep over `recovery_time` (which the paper identifies as the dominant
+parameter) to find the working pool size that minimises training time for
+your specific configuration.
+
+**Note:** AIReSim assumes exponential failure distributions. If your logs
+show heavy-tailed or bursty failure patterns, consider using the Weibull
+or lognormal distribution options (`failure_distribution`, `weibull_shape`,
+`lognormal_sigma` in `params.py`) and fit the shape parameter to your data.
