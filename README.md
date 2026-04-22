@@ -337,8 +337,8 @@ If you use AIReSim in your research, please cite:
   journal={arXiv preprint arXiv:2603.07041},
   year={2026}
 }
-```
 
 ## Disclosure
 
 Most of this codebase and documentation was generated with the help of a generative AI agent (Claude code), based on the arXiv paper above. 
+```
