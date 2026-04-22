@@ -74,7 +74,7 @@ tests/
 ├── test_edge_cases.py              # Race-condition / bug-regression tests (5 cases)
 ├── test_scored_removal.py          # ScoredRemoval unit + integration tests (24 cases)
 ├── test_scheduling_policies.py     # HighestScoreFirst tests (9 cases)
-└── test_diagnosis_probability.py   # Diagnosis parameter tests (18 cases)
+└── test_diagnosis_probability.py   # Diagnosis parameter tests (20 cases)
 
 examples/
 ├── paper_table1_sweep.py       # Reproduce Table 1 from the paper
@@ -338,3 +338,7 @@ If you use AIReSim in your research, please cite:
   year={2026}
 }
 ```
+
+## Disclosure
+
+Most of this codebase and documentation was generated with the help of a generative AI agent (Claude code), based on the arXiv paper above. 
