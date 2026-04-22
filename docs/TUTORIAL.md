@@ -744,7 +744,6 @@ Halving `recovery_time` from 20 → 10 min would raise ETR to approximately **76
 saving ~1,858 hrs of training time.  ETR thus gives an immediately actionable
 engineering target.
 
----
 
 ## 10. Calibrating Parameters from Your Own Cluster Logs
 
@@ -791,3 +790,5 @@ your specific configuration.
 show heavy-tailed or bursty failure patterns, consider using the Weibull
 or lognormal distribution options (`failure_distribution`, `weibull_shape`,
 `lognormal_sigma` in `params.py`) and fit the shape parameter to your data.
+
+---
