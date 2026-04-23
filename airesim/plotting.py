@@ -18,7 +18,7 @@ def plot_one_way_sweep(
     ylabel: str = "Total Training Time (Hours)",
     title: str | None = None,
     save_path: str | None = None,
-):
+) -> None:
     """Bar chart for a one-way parameter sweep.
 
     Args:
@@ -70,7 +70,7 @@ def plot_two_way_sweep(
     ylabel: str = "Total Training Time (Hours)",
     title: str | None = None,
     save_path: str | None = None,
-):
+) -> None:
     """Grouped bar chart for a two-way parameter sweep.
 
     Produces a chart similar to Figure 2 in the AIReSim paper,
@@ -207,7 +207,7 @@ def plot_tornado_chart(
     xlabel: str = "Total Training Time (Hours)",
     save_path: str | None = None,
     max_params: int = 15,
-):
+) -> None:
     """Horizontal tornado chart ranking parameters by their impact on a metric.
 
     Each bar spans from the minimum to the maximum mean value observed across

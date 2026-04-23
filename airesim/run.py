@@ -130,7 +130,7 @@ def run_adaptive(base_params: Params) -> None:
 
 # ── Modes ─────────────────────────────────────────────────────────────────────
 
-def run_demo():
+def run_demo() -> None:
     """Run a small built-in sweep to verify the simulator works."""
     print("AIReSim — Demo Sweep")
     print("=" * 50)
@@ -168,7 +168,7 @@ def run_demo():
     print("\nDone!")
 
 
-def run_script(path: str):
+def run_script(path: str) -> None:
     """Load and execute a user-provided sweep script."""
     spec = importlib.util.spec_from_file_location("user_sweep", path)
     if spec is None or spec.loader is None:
@@ -187,7 +187,7 @@ def run_sweep(
     base_params: Params,
     num_replications: int,
     output: str | None,
-):
+) -> None:
     """Execute a one-way sweep and optionally write results to CSV."""
     print(f"AIReSim — One-Way Sweep: {param_name}")
     print(f"  values        : {values}")
@@ -285,7 +285,7 @@ def build_parser() -> argparse.ArgumentParser:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def main():
+def main() -> None:
     """Parse CLI arguments and dispatch to the appropriate run mode.
 
     Validates mutual-exclusion constraints (``SCRIPT`` XOR ``--sweep``, and

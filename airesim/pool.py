@@ -26,7 +26,7 @@ class PoolManager:
 
     # ── Initialization ───────────────────────────────────────────────────
 
-    def init_pools(self, all_servers: list[Server], working_size: int, spare_size: int):
+    def init_pools(self, all_servers: list[Server], working_size: int, spare_size: int) -> None:
         """Partition servers into working and spare pools at simulation start."""
         for s in all_servers[:working_size]:
             s.state = ServerState.IDLE
