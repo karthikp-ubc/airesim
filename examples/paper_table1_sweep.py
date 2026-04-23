@@ -28,7 +28,7 @@ BASE = Params(
     num_replications=30,
 )
 
-WORKING_POOL_VALUES = [4128, 4160, 4192]
+WORKING_POOL_VALUES = [4112, 4128, 4160, 4192]
 
 
 def main():
