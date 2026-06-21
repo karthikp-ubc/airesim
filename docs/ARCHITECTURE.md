@@ -73,6 +73,21 @@ All five fields are validated by `validate()` and loadable from a YAML or JSON p
 
 Both are validated in `[0, 1]` by `validate()`.
 
+**Failure distribution parameters:**
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `failure_distribution` | `'exponential'` | TTF distribution: `'exponential'`, `'weibull'`, or `'lognormal'` |
+| `weibull_shape` | `1.0` | Weibull shape k; k < 1 → infant mortality, k = 1 → exponential, k > 1 → wear-out |
+| `lognormal_sigma` | `1.0` | Lognormal σ (std-dev of log); all three distributions share the same mean TTF |
+
+**Hardware-aging parameters:**
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `bad_server_regeneration` | `False` | If `True`, periodically convert good servers to bad to model aging or hardware replacement |
+| `bad_server_regen_interval` | `43 200` (30 days) | Minutes between aging events; each event converts ≈ `systematic_failure_fraction × 10%` of surviving good servers |
+
 **Design decisions:**
 
 - *Single source of truth.* Every other module receives the values it needs directly

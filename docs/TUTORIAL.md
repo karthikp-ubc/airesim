@@ -66,10 +66,45 @@ print(json.dumps(stats.summary_dict(), indent=2))
 | `recovery_time` | 20 min | Time to reload checkpoint after a failure |
 | `diagnosis_probability` | 1.0 | P(failure triggers a repair attempt on any server) |
 | `diagnosis_uncertainty` | 0.0 | P(wrong server blamed \| failure diagnosed) |
+| `failure_distribution` | `'exponential'` | TTF distribution: `'exponential'`, `'weibull'`, or `'lognormal'` (see §11) |
+| `bad_server_regeneration` | False | Periodically convert good servers to bad (hardware aging) |
+| `bad_server_regen_interval` | 43 200 min | Interval between aging events (default 30 days) |
 | `adaptive_replications` | False | Enable automatic run-count selection (see §8) |
 | `confidence_level` | 0.95 | CI confidence level for adaptive stopping criterion |
 | `relative_accuracy` | 0.05 | Target half-width as fraction of mean (e.g. 0.05 = ±5%) |
 | `seed` | 42 | RNG seed for reproducibility |
+
+### Modelling hardware aging (`bad_server_regeneration`)
+
+By default, the fraction of "bad" servers is fixed at initialisation.  Setting
+`bad_server_regeneration=True` adds a background process that periodically promotes
+a small number of good servers to bad, modelling hardware aging or the gradual
+rollout of lower-quality replacement hardware:
+
+```python
+params = Params(
+    job_size=64,
+    warm_standbys=8,
+    working_pool_size=80,
+    spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    systematic_failure_fraction=0.05,          # initial bad-server fraction
+    systematic_failure_rate_multiplier=10.0,
+    bad_server_regeneration=True,
+    bad_server_regen_interval=30 * 24 * 60,    # regenerate every 30 days
+    seed=42,
+)
+
+sim = Simulator(params, seed=42)
+stats = sim.run()
+print(f"Training time: {stats.training_time_hours:.1f} hrs")
+```
+
+Every `bad_server_regen_interval` minutes the simulator converts roughly
+`systematic_failure_fraction × 10%` of the surviving good servers to bad.
+Training jobs that run for many months will therefore see a gradually rising
+failure rate over time.  Leave `bad_server_regeneration=False` (the default)
+when modelling a fixed hardware population.
 
 ---
 
@@ -163,6 +198,65 @@ python -m airesim.run \
     --values 5,10,20,40 \
     --output recovery_sweep.csv
 ```
+
+### Two-way sweep
+
+`TwoWaySweep` runs every combination of two parameters (Cartesian product) and
+returns a single `SweepResult` where each entry's `param_value` is a
+`(v1, v2)` tuple.
+
+```python
+from airesim.params import Params
+from airesim.sweep import TwoWaySweep
+
+base = Params(
+    job_size=64,
+    warm_standbys=8,
+    working_pool_size=80,
+    spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    seed=42,
+)
+
+sweep = TwoWaySweep(
+    param1_name="recovery_time",
+    param1_values=[5, 10, 20, 40],
+    param2_name="warm_standbys",
+    param2_values=[4, 8, 16],
+    base_params=base,
+    num_replications=10,
+)
+
+result = sweep.run(verbose=True)
+result.summary()
+```
+
+Each cell of the grid is its own `AggregateStats` object in `result.results`.
+Access a specific cell's mean training time:
+
+```python
+for agg in result.results:
+    v1, v2 = agg.param_value
+    tt = agg.training_time_summary()
+    print(f"recovery_time={v1:3}  warm_standbys={v2:2}  → {tt['mean']:.1f} hrs")
+```
+
+To produce a grouped bar chart (requires matplotlib):
+
+```python
+from airesim.plotting import plot_two_way_sweep
+
+plot_two_way_sweep(
+    result,
+    param1_name="recovery_time",
+    param2_name="warm_standbys",
+    title="Training time: recovery × standbys",
+    save_path="two_way.png",
+)
+```
+
+The chart groups bars by `param1` values on the x-axis, with one bar per
+`param2` value per group — equivalent to Figure 2 in the AIReSim paper.
 
 ---
 
@@ -786,9 +880,101 @@ sweep over `recovery_time` (which the paper identifies as the dominant
 parameter) to find the working pool size that minimises training time for
 your specific configuration.
 
-**Note:** AIReSim assumes exponential failure distributions. If your logs
-show heavy-tailed or bursty failure patterns, consider using the Weibull
-or lognormal distribution options (`failure_distribution`, `weibull_shape`,
-`lognormal_sigma` in `params.py`) and fit the shape parameter to your data.
+Once you have calibrated values, consider whether the exponential distribution
+is the right choice — see §11 for guidance on Weibull and lognormal alternatives.
+
+---
+
+## 11. Failure Distributions
+
+AIReSim supports three time-to-failure (TTF) distributions.  All three are
+parameterised so their **mean equals `1 / failure_rate`**, making comparisons
+fair: you can swap distributions without changing the average failure frequency.
+
+| `failure_distribution` | Shape knob | Character |
+|---|---|---|
+| `'exponential'` | *(none)* | Memoryless; constant hazard rate (default) |
+| `'weibull'` | `weibull_shape` (k > 0) | k < 1 → infant mortality; k = 1 → exponential; k > 1 → wear-out |
+| `'lognormal'` | `lognormal_sigma` (σ > 0) | Heavy-tailed bursts; smaller σ → tighter spread around the mean |
+
+### Choosing a distribution
+
+- **Exponential** is appropriate when failures are independent random events with
+  no memory of past uptime (the most common model for large-scale server fleets).
+- **Weibull with k > 1** models wear-out: servers that have been running longer
+  are more likely to fail.  `k ≈ 2–3` is typical for mechanical components.
+- **Weibull with k < 1** models infant mortality: early failures are more common
+  and the hazard rate decreases over time.
+- **Lognormal** produces occasional very-long inter-failure intervals interspersed
+  with clusters of rapid failures.  It fits well when failure patterns are bursty.
+
+### Usage
+
+```python
+from airesim.params import Params
+from airesim.simulator import Simulator
+
+# Wear-out model: servers become increasingly likely to fail over time
+params_weibull = Params(
+    job_size=64,
+    warm_standbys=8,
+    working_pool_size=80,
+    spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    failure_distribution='weibull',
+    weibull_shape=2.0,    # k=2: hazard rate grows linearly with time
+    seed=42,
+)
+
+sim = Simulator(params_weibull, seed=42)
+stats = sim.run()
+print(f"Weibull (k=2): {stats.training_time_hours:.1f} hrs")
+
+# Bursty failure model
+params_lognormal = Params(
+    job_size=64,
+    warm_standbys=8,
+    working_pool_size=80,
+    spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    failure_distribution='lognormal',
+    lognormal_sigma=1.5,  # σ=1.5: heavy tail, occasional very long intervals
+    seed=42,
+)
+
+sim2 = Simulator(params_lognormal, seed=42)
+stats2 = sim2.run()
+print(f"Lognormal (σ=1.5): {stats2.training_time_hours:.1f} hrs")
+```
+
+> **Tip:** Set `weibull_shape=1.0` or `lognormal_sigma` to a very small value to
+> approximate exponential behaviour and sanity-check that your distribution choice
+> is the only thing changing.
+
+### Comparing distributions in a sweep
+
+```python
+from airesim.sweep import OneWaySweep
+
+sweep = OneWaySweep(
+    param_name="failure_distribution",
+    values=["exponential", "weibull", "lognormal"],
+    base_params=Params(
+        job_size=64, warm_standbys=8,
+        working_pool_size=80, spare_pool_size=16,
+        job_length=60 * 24 * 60,
+        weibull_shape=2.0,
+        lognormal_sigma=1.5,
+        seed=42,
+    ),
+    num_replications=10,
+)
+result = sweep.run()
+result.summary()
+```
+
+The mean TTF is identical across all three cells; only the variance and tail
+behaviour differ.  A large difference in training time between distributions
+signals that your cluster is sensitive to failure burstiness, not just rate.
 
 ---
