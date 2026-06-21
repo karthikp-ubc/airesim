@@ -74,7 +74,7 @@ tests/
 ├── test_edge_cases.py              # Race-condition / bug-regression tests (5 cases)
 ├── test_scored_removal.py          # ScoredRemoval unit + integration tests (24 cases)
 ├── test_scheduling_policies.py     # HighestScoreFirst tests (9 cases)
-└── test_diagnosis_probability.py   # Diagnosis parameter tests (20 cases)
+└── test_diagnosis_probability.py   # Diagnosis parameter tests (18 cases)
 
 examples/
 ├── paper_table1_sweep.py       # Reproduce Table 1 from the paper

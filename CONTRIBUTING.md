@@ -65,13 +65,13 @@ before opening a pull request.
 
 ### Adding a new policy
 
-Subclass the appropriate ABC in `airesim/policies.py`:
+Subclass the appropriate ABC:
 
-| What you want to customise | ABC to subclass |
-|---|---|
-| Which servers run the job | `HostSelectionPolicy` |
-| Auto → manual repair escalation | `RepairEscalationPolicy` |
-| Permanently retiring servers | `ServerRemovalPolicy` |
+| What you want to customise | ABC to subclass | File |
+|---|---|---|
+| Which servers run the job | `HostSelectionPolicy` | `airesim/scheduling_policies.py` |
+| Auto → manual repair escalation | `RepairEscalationPolicy` | `airesim/policies.py` |
+| Permanently retiring servers | `ServerRemovalPolicy` | `airesim/policies.py` |
 
 See `docs/TUTORIAL.md` §3 for a worked example.
 

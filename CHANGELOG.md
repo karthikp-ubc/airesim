@@ -193,7 +193,7 @@ Three race conditions in the original discrete-event loop were fixed:
 
 ### Testing
 
-#### New test module: `tests/test_diagnosis_probability.py` (20 tests)
+#### New test module: `tests/test_diagnosis_probability.py` (18 tests)
 
 Covers `diagnosis_probability` and `diagnosis_uncertainty` parameter
 validation and simulation behaviour, including regression tests for both bugs
@@ -213,9 +213,9 @@ described above:
 | Module | Cases | What it covers |
 |--------|-------|----------------|
 | `tests/test_edge_cases.py` | 5 | Race-condition regressions |
-| `tests/test_scored_removal.py` | 22 | `ScoredRemoval` score arithmetic, thresholds, snapshot, integration |
+| `tests/test_scored_removal.py` | 24 | `ScoredRemoval` score arithmetic, thresholds, snapshot, integration |
 | `tests/test_scheduling_policies.py` | 9 | `HighestScoreFirst` ordering, untracked servers, reset |
-| `tests/test_diagnosis_probability.py` | 20 | Diagnosis parameter validation and simulation behaviour |
+| `tests/test_diagnosis_probability.py` | 18 | Diagnosis parameter validation and simulation behaviour |
 
 Total test suite: **79 tests**, all passing.
 
