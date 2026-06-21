@@ -661,7 +661,7 @@ report = runner.run(verbose=True)
 
 print(report)
 print(f"Converged: {report.converged} after {report.num_runs} runs")
-print(f"ETR (mean): {report.mean_training_hrs} hrs")
+print(f"Mean training time: {report.mean_training_hrs} hrs")
 ```
 
 ### Reading `ConvergenceReport`
