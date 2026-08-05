@@ -13,6 +13,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 from airesim.params import Params
 from airesim.policies import ScoredRemoval
 from airesim.scheduling_policies import (
+    DefaultHostSelection,
     HighestScoreFirst,
 )
 from airesim.server import Server
@@ -33,6 +34,68 @@ def make_server(server_id: int = 0, is_bad: bool = False) -> Server:
 
 def _rng() -> random.Random:
     return random.Random(42)
+
+
+# ── DefaultHostSelection unit tests ───────────────────────────────────────────
+
+class TestDefaultHostSelection:
+
+    def test_returns_needed_count(self):
+        policy = DefaultHostSelection()
+        servers = [make_server(i) for i in range(20)]
+        selected = policy.select(servers, job_size=5, warm_standbys=2, rng=_rng())
+        assert len(selected) == 7
+
+    def test_returns_fewer_when_pool_too_small(self):
+        policy = DefaultHostSelection()
+        servers = [make_server(i) for i in range(3)]
+        selected = policy.select(servers, job_size=5, warm_standbys=2, rng=_rng())
+        assert len(selected) == 3
+
+    def test_no_duplicates_in_selection(self):
+        policy = DefaultHostSelection()
+        servers = [make_server(i) for i in range(20)]
+        selected = policy.select(servers, job_size=5, warm_standbys=2, rng=_rng())
+        assert len(set(selected)) == len(selected)
+
+    def test_samples_across_entire_pool_not_just_a_prefix(self):
+        """Regression test: selection must be a uniform sample of the whole
+        available pool, not a shuffle restricted to available_servers[:needed].
+
+        Before the fix, DefaultHostSelection took available_servers[:needed]
+        first and only shuffled *within* that prefix, so a server at index
+        >= needed could never be selected regardless of rng seed. Here we
+        sweep many seeds with needed=5 out of 20 servers and confirm servers
+        beyond index 5 do get selected.
+        """
+        policy = DefaultHostSelection()
+        servers = [make_server(i) for i in range(20)]
+        prefix_ids = {s.server_id for s in servers[:5]}
+
+        selected_beyond_prefix = False
+        for seed in range(50):
+            selected = policy.select(servers, job_size=5, warm_standbys=0,
+                                      rng=random.Random(seed))
+            if any(s.server_id not in prefix_ids for s in selected):
+                selected_beyond_prefix = True
+                break
+
+        assert selected_beyond_prefix, (
+            "DefaultHostSelection never selected a server outside the first "
+            "`needed` positions across 50 seeds — selection is not sampling "
+            "the full available pool"
+        )
+
+    def test_every_server_selectable_over_many_seeds(self):
+        """Every server in the pool should be selectable, not just a fixed subset."""
+        policy = DefaultHostSelection()
+        servers = [make_server(i) for i in range(10)]
+        ever_selected = set()
+        for seed in range(200):
+            selected = policy.select(servers, job_size=3, warm_standbys=0,
+                                      rng=random.Random(seed))
+            ever_selected.update(s.server_id for s in selected)
+        assert ever_selected == set(range(10))
 
 
 # ── HighestScoreFirst unit tests ──────────────────────────────────────────────
