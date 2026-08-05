@@ -62,10 +62,12 @@ airesim/                    # source package
 ├── scheduler.py            # Host selection and warm-standby management
 ├── repairs.py              # RepairShop: auto → manual two-stage pipeline (SimPy processes)
 ├── pool.py                 # PoolManager: working pool / spare pool bookkeeping
-├── scheduling_policies.py  # HostSelectionPolicy ABC + Default, FewestFailuresFirst, HighestScoreFirst
+├── scheduling_policies.py  # HostSelectionPolicy ABC + Default, FewestFailuresFirst,
+│                           #   HighestScoreFirst, PackedByRackFirst
 ├── policies.py             # RepairEscalationPolicy + ServerRemovalPolicy ABCs;
 │                           #   NeverRemove, ThresholdRemoval, ScoredRemoval,
 │                           #   CompositeRemovalPolicy; re-exports scheduling_policies
+├── topology.py             # Optional rack_id assignment (Params.enable_topology)
 ├── simulator.py            # Top-level DES orchestrator
 ├── stats.py                # StatsCollector (per-run), AggregateStats (multi-rep)
 ├── sweep.py                # OneWaySweep / TwoWaySweep parameter sweep drivers
@@ -74,12 +76,13 @@ airesim/                    # source package
 ├── run.py                  # CLI entry point
 └── __init__.py
 
-tests/                      # 79 tests across 5 modules, all passing
+tests/                      # 97 tests across 6 modules, all passing
 ├── test_airesim.py         # Core params, server, coordinator, pool, scheduler, sweeps (23)
 ├── test_edge_cases.py      # Race-condition / bug-regression tests (5)
 ├── test_scored_removal.py  # ScoredRemoval unit + integration (24)
-├── test_scheduling_policies.py   # HighestScoreFirst ordering, reset (9)
-└── test_diagnosis_probability.py # diagnosis_probability / diagnosis_uncertainty (18)
+├── test_scheduling_policies.py   # DefaultHostSelection, HighestScoreFirst ordering, reset (14)
+├── test_diagnosis_probability.py # diagnosis_probability / diagnosis_uncertainty (18)
+└── test_topology.py        # rack assignment, PackedByRackFirst, enable_topology flag (13)
 
 docs/
 ├── ARCHITECTURE.md         # Module-by-module reference + design decisions
@@ -117,6 +120,8 @@ Do **not** add new core dependencies to `airesim/` without discussion.  Optional
 - **No circular imports.** Dependency order: `params` → `server` → `pool` →
   `scheduling_policies` → `policies` → `repairs/scheduler/coordinator` → `simulator` →
   `stats/sweep/adaptive`.  `plotting.py` only imports via `TYPE_CHECKING`.
+  `topology.py` sits alongside `pool.py` — it only imports `server.py` and is
+  itself imported by `simulator.py`.
 - **`Params` is the single source of truth.** All simulation knobs live in the `Params`
   dataclass.  Use `params.with_overrides(**kwargs)` to create isolated copies for sweeps.
 - **Pluggable policies via dependency injection.** `HostSelectionPolicy`,

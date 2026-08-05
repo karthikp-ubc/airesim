@@ -4,6 +4,86 @@ All notable changes to AIReSim are recorded here.
 
 ---
 
+## [Unreleased] — 2026-08-05
+
+### Bug Fixes
+
+#### Bug: `DefaultHostSelection` sampled from a prefix, not the full pool
+
+**Affected files:** `airesim/scheduling_policies.py`, `tests/test_scheduling_policies.py`
+
+**Symptom:** `DefaultHostSelection.select()` is documented as "uniform random," but
+took `available_servers[:needed]` first and only shuffled *within* that prefix.
+Servers beyond index `needed` in `available_servers` could never be selected,
+regardless of RNG seed.
+
+**How it was found:** Discovered while verifying the new rack-topology feature.
+`PackedByRackFirst` and `DefaultHostSelection` produced *identical* racks-spanned
+results on a freshly-initialized pool, because `assign_racks` assigns rack IDs in
+the same contiguous order the pool was constructed in — so the old prefix-based
+"random" selection happened to line up with rack boundaries by construction. The
+bug only became visible once the pool churned (repaired servers are appended to
+the *end* of `working_pool` via `pool.py`'s `return_to_working`), at which point
+`DefaultHostSelection` continued favoring early-list servers while claiming to be
+uniform random.
+
+**Fix:** `select()` now uses `rng.sample(available_servers, needed)` to draw a
+true uniform sample from the entire available pool.
+
+**Impact:** This changes *which* specific servers `DefaultHostSelection` picks
+(and therefore RNG-call sequencing) but not simulation semantics — mean training
+time was verified statistically unchanged (< 0.1% relative difference across
+15 seeds, both under normal and high-churn conditions). No existing test asserted
+on the specific servers selected, so no other test needed updating.
+
+**New tests:** `tests/test_scheduling_policies.py::TestDefaultHostSelection` —
+5 tests, including a regression test (`test_samples_across_entire_pool_not_just_a_prefix`)
+that sweeps 50 seeds to confirm servers outside the old prefix window are
+selectable, and `test_every_server_selectable_over_many_seeds`.
+
+---
+
+### New Features
+
+#### Rack topology: `Params.enable_topology`, `airesim/topology.py`, `PackedByRackFirst`
+
+**Affected files:** `airesim/topology.py` (new), `airesim/server.py`, `airesim/params.py`,
+`airesim/simulator.py`, `airesim/scheduling_policies.py`, `airesim/policies.py` (re-export),
+`tests/test_topology.py` (new)
+
+A first step toward hierarchical-cluster modeling: an opt-in rack layer on top of the
+flat working/spare pool.
+
+- **`Server.rack_id: int | None`** — new field, defaults to `None` (topology not
+  modeled).
+- **`airesim/topology.py`** — new module; `assign_racks(servers, rack_size)` tags
+  each server with `rack_id = index // rack_size` in place. No other component
+  (`Coordinator`, `RepairShop`, `PoolManager`) needs to know about racks.
+- **`Params.enable_topology`** (default `False`) and **`Params.rack_size`** (default
+  `8`) — when `enable_topology` is `True`, `Simulator.run()` calls `assign_racks` on
+  the full server list (after the bad-server shuffle, so rack membership isn't
+  correlated with reliability). `rack_size` is validated `> 0`.
+- **`PackedByRackFirst`** — new `HostSelectionPolicy` that groups available servers
+  by `rack_id` and fills the job from the largest rack(s) first, minimizing the
+  number of racks a job spans (network-locality heuristic). Servers with
+  `rack_id is None` are grouped into a single implicit rack, so the policy is safe
+  to use even with `enable_topology=False` (it just degrades to one rack).
+
+Both new params default to values that leave existing simulations byte-for-byte
+unaffected (`enable_topology=False` means every server's `rack_id` stays `None` and
+no behavior changes).
+
+#### New test module: `tests/test_topology.py` (13 tests)
+
+Covers `assign_racks` (contiguous blocks, partial last rack), `rack_size`
+validation, `PackedByRackFirst` unit behavior (packing, spanning multiple racks,
+undersized pools, untagged/topology-disabled servers), and end-to-end `Simulator`
+integration with `enable_topology` on and off.
+
+Total test suite: **97 tests**, all passing.
+
+---
+
 ## [Unreleased] — 2026-04-21
 
 ### Code Quality

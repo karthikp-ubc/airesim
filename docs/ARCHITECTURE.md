@@ -81,6 +81,13 @@ Both are validated in `[0, 1]` by `validate()`.
 | `weibull_shape` | `1.0` | Weibull shape k; k < 1 → infant mortality, k = 1 → exponential, k > 1 → wear-out |
 | `lognormal_sigma` | `1.0` | Lognormal σ (std-dev of log); all three distributions share the same mean TTF |
 
+**Topology parameters:**
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `enable_topology` | `False` | If `True`, assigns each server a `rack_id` (see `topology.py`) so rack-aware scheduling policies like `PackedByRackFirst` can be used |
+| `rack_size` | `8` | Servers per rack; only used when `enable_topology` is `True` |
+
 **Hardware-aging parameters:**
 
 | Parameter | Default | Meaning |
@@ -120,6 +127,10 @@ failure history, and whether the server is "bad" (elevated systematic failure ra
   servers and just `random` for good ones.
 - *`failure_timestamps`* is a list of wall-clock times at which the server failed,
   used by `ThresholdRemoval` to count failures within a rolling time window.
+- *`rack_id`* defaults to `None` and is only populated by `topology.py`'s
+  `assign_racks()` when `Params.enable_topology` is `True`. Keeping it `None` by
+  default (rather than e.g. `0`) lets `PackedByRackFirst` and tests distinguish
+  "topology disabled" from "assigned to rack 0".
 
 ---
 
@@ -305,6 +316,7 @@ these names for backward compatibility.
 | `DefaultHostSelection` | Uniform random selection |
 | `FewestFailuresFirst` | Sort ascending by `total_failure_count`; fewest-failures servers run first |
 | `HighestScoreFirst` | Sort descending by `ScoredRemoval` score; highest-scored servers run first |
+| `PackedByRackFirst` | Group by `rack_id`; fill from the largest rack(s) first to minimize racks spanned |
 
 **Design decisions:**
 
@@ -319,6 +331,47 @@ these names for backward compatibility.
   credits are ever awarded, and score = `initial − penalty × failures` — a strictly
   decreasing linear function of failure count, identical to `FewestFailuresFirst`'s
   ordering.
+- *`PackedByRackFirst` is a greedy heuristic, not an optimal bin-cover.* Sorting
+  racks by descending available-server count and filling largest-first tends to
+  minimize the number of racks spanned, but isn't guaranteed optimal for every
+  distribution of rack occupancy. It's O(N log N) and matches the simplicity of the
+  other built-in policies. Requires `Params.enable_topology=True`; servers with
+  `rack_id is None` are grouped into a single implicit rack, so the policy degrades
+  gracefully (to something like `DefaultHostSelection` within that rack) if topology
+  isn't enabled.
+- *`DefaultHostSelection` samples via `rng.sample()` over the entire available
+  pool* (fixed 2026-08-05 — see CHANGELOG). An earlier version took
+  `available_servers[:needed]` and shuffled only within that prefix, so a server
+  past index `needed` could never be chosen. This went unnoticed because on a
+  freshly-initialized pool the prefix already lines up with whatever grouping a
+  test or policy checks (e.g. rack boundaries); it only manifests once the pool
+  order is churned by repairs (`return_to_working` appends to the end of
+  `working_pool`).
+
+---
+
+### `topology.py` — optional rack assignment
+
+**What it does:** A single function, `assign_racks(servers, rack_size)`, that tags
+each `Server` with a `rack_id` (`i // rack_size` over the server list) so that
+scheduling policies can reason about physical/network locality. This is the entire
+"hierarchical cluster" extension: no other component needs to know about racks.
+
+**Design decisions:**
+
+- *Opt-in via `Params.enable_topology`.* Off by default (`rack_id` stays `None` on
+  every server), so existing sims, sweeps, and policies are completely unaffected.
+- *Assignment, not a class.* Rack membership is static for the lifetime of a run
+  (no rack failures, no rebalancing), so a plain function that mutates `Server.rack_id`
+  in place is sufficient — no need for a `Topology` object with its own state.
+- *No coupling to failure timing or repair.* `Coordinator`, `RepairShop`, and
+  `PoolManager` are all topology-agnostic; `rack_id` is consulted only by
+  `PackedByRackFirst` (and any custom `HostSelectionPolicy` a user writes). This
+  keeps the performance-critical aggregated-exponential sampling path in
+  `Coordinator` completely untouched.
+- *Called in `Simulator.run()` after the bad-server shuffle*, so rack membership is
+  independent of which servers happen to be "bad" — racks aren't correlated with
+  reliability by construction.
 
 ---
 
@@ -594,6 +647,7 @@ run.py
  │               │               ├─► scheduler.py ──► scheduling_policies.py
  │               │               ├─► pool.py
  │               │               ├─► server.py
+ │               │               ├─► topology.py ──► server.py
  │               │               ├─► params.py
  │               │               ├─► stats.py
  │               │               ├─► policies.py ──► scheduling_policies.py (re-export)
@@ -608,5 +662,8 @@ No circular dependencies.  `adaptive.py` imports only `params.py`, `simulator.py
 `stats.py`, and `policies.py` (for type hints) — the same set as `sweep.py`.
 `policies.py` imports from `scheduling_policies.py` for re-export only;
 `scheduling_policies.py` does not import `policies.py`.
+`topology.py` imports only `server.py`, mirroring `pool.py`'s place in the
+dependency order; `PackedByRackFirst` (in `scheduling_policies.py`) reads
+`Server.rack_id` but does not import `topology.py` itself.
 `plotting.py` uses a `TYPE_CHECKING` guard so `SweepResult` is only imported for
 type checking, keeping it independent of the simulation core at runtime.

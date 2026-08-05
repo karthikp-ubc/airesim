@@ -21,6 +21,7 @@ from airesim.scheduling_policies import (  # noqa: F401
     FewestFailuresFirst,
     HighestScoreFirst,
     HostSelectionPolicy,
+    PackedByRackFirst,
 )
 
 # ── Repair escalation ────────────────────────────────────────────────────────

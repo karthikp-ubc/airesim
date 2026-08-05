@@ -273,6 +273,7 @@ from airesim.scheduling_policies import (
     DefaultHostSelection,   # uniform random (default)
     FewestFailuresFirst,    # prefer servers with fewest cumulative failures
     HighestScoreFirst,      # prefer servers with highest ScoredRemoval score
+    PackedByRackFirst,      # prefer packing the job into as few racks as possible
 )
 from airesim.simulator import Simulator
 from airesim.params import Params
@@ -320,6 +321,34 @@ stats = sim.run()
 > `HighestScoreFirst` and `FewestFailuresFirst` produce identical server orderings
 > because no uptime credits are ever awarded and score reduces to a linear function
 > of failure count.
+
+`PackedByRackFirst` models a **hierarchical cluster** (racks as a failure/locality
+domain) rather than a fully flat pool. It requires `Params.enable_topology=True`,
+which tags every server with a `rack_id` (`rack_size` servers per rack) before the
+run starts:
+
+```python
+from airesim.scheduling_policies import PackedByRackFirst
+
+params = Params(
+    job_size=64, warm_standbys=8,
+    working_pool_size=80, spare_pool_size=16,
+    job_length=60 * 24 * 60,
+    enable_topology=True,   # assign servers to racks
+    rack_size=8,            # 8 servers per rack
+    seed=42,
+)
+sim = Simulator(params, seed=42, host_selection_policy=PackedByRackFirst())
+stats = sim.run()
+print(f"PackedByRackFirst: {stats.training_time_hours:.1f} hrs")
+```
+
+`PackedByRackFirst` groups available servers by `rack_id` and fills the job from the
+rack(s) with the most available servers first, which tends to minimize the number of
+distinct racks a job spans — useful for modeling network locality (e.g. preferring
+same-rack/same-switch placement) on top of the existing reliability model. With
+`enable_topology=False` (the default), every server's `rack_id` is `None` and
+`PackedByRackFirst` degrades to grouping everything into one implicit rack.
 
 ### Writing a custom scheduling policy
 

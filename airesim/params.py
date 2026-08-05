@@ -34,6 +34,10 @@ class Params:
     working_pool_size: int = 4160  # total servers in working pool
     spare_pool_size: int = 200  # servers in spare pool
 
+    # ── Topology ─────────────────────────────────────────────────────────────
+    enable_topology: bool = False  # assign servers to racks for locality-aware scheduling
+    rack_size: int = 8  # servers per rack (only used when enable_topology is True)
+
     # ── Preemption ───────────────────────────────────────────────────────────
     preemption_wait_time: float = 20.0  # minutes to preempt a job from spare pool
 
@@ -118,6 +122,8 @@ class Params:
             raise ValueError(
                 "max_replications must be >= num_replications"
             )
+        if self.rack_size <= 0:
+            raise ValueError("rack_size must be > 0")
 
     def with_overrides(self, **kwargs) -> "Params":
         """Return a new Params with selected fields overridden."""

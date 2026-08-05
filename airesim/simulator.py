@@ -25,6 +25,7 @@ from airesim.scheduler import Scheduler
 from airesim.scheduling_policies import DefaultHostSelection, HostSelectionPolicy
 from airesim.server import Server, ServerState
 from airesim.stats import StatsCollector
+from airesim.topology import assign_racks
 
 
 class Simulator:
@@ -83,6 +84,12 @@ class Simulator:
 
         # Shuffle so bad servers are distributed randomly
         rng.shuffle(all_servers)
+
+        # Optionally tag servers with rack_id for locality-aware scheduling.
+        # Assigned after the shuffle so rack membership isn't correlated with
+        # server_id (e.g. with the "first num_bad servers are bad" scheme above).
+        if p.enable_topology:
+            assign_racks(all_servers, p.rack_size)
 
         # ── Initialize pools ─────────────────────────────────────────────
         pool_mgr = PoolManager()

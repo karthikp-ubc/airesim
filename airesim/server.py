@@ -52,6 +52,10 @@ class Server:
         # State
         self.state = ServerState.IDLE
 
+        # Topology (optional — set by airesim.topology.assign_racks when
+        # Params.enable_topology is True; None means topology is not modeled).
+        self.rack_id: int | None = None
+
         # Bookkeeping
         self.total_failure_count = 0
         self.random_failure_count = 0

@@ -46,11 +46,15 @@ class DefaultHostSelection(HostSelectionPolicy):
         warm_standbys: int,
         rng: random.Random,
     ) -> list["Server"]:
-        """Shuffle the available pool and return the first ``job_size + warm_standbys`` servers."""
+        """Return a uniform random sample of ``job_size + warm_standbys`` servers.
+
+        Samples across the *entire* available pool (not just a prefix of it),
+        so selection isn't biased by whatever order ``available_servers``
+        happens to be in (e.g. after repaired servers are appended back to
+        the working pool).
+        """
         needed = job_size + warm_standbys
-        chosen = available_servers[:needed]  # pool is already shuffled or ordered
-        rng.shuffle(chosen)
-        return chosen[:needed]
+        return rng.sample(available_servers, min(needed, len(available_servers)))
 
 
 class FewestFailuresFirst(HostSelectionPolicy):
@@ -69,6 +73,44 @@ class FewestFailuresFirst(HostSelectionPolicy):
             available_servers, key=lambda s: (s.total_failure_count, rng.random())
         )
         return sorted_servers[:needed]
+
+
+class PackedByRackFirst(HostSelectionPolicy):
+    """Prefer packing the job into as few racks as possible (network locality).
+
+    Requires ``Params.enable_topology=True`` (servers must have a ``rack_id``
+    set by ``airesim.topology.assign_racks``); untagged servers (``rack_id is
+    None``) are treated as a single rack and simply grouped together.
+
+    Available servers are grouped by ``rack_id``, each rack's members are
+    shuffled to avoid list-order bias, and racks are then filled into the
+    selection largest-first — a simple greedy heuristic that tends to
+    minimize the number of distinct racks a job spans.
+    """
+
+    def select(
+        self,
+        available_servers: list["Server"],
+        job_size: int,
+        warm_standbys: int,
+        rng: random.Random,
+    ) -> list["Server"]:
+        """Group by rack, order racks by descending size, and fill greedily."""
+        needed = job_size + warm_standbys
+        by_rack: dict[int | None, list["Server"]] = {}
+        for s in available_servers:
+            by_rack.setdefault(s.rack_id, []).append(s)
+
+        for rack_servers in by_rack.values():
+            rng.shuffle(rack_servers)
+        ordered_racks = sorted(by_rack.values(), key=len, reverse=True)
+
+        selected: list["Server"] = []
+        for rack_servers in ordered_racks:
+            selected.extend(rack_servers)
+            if len(selected) >= needed:
+                break
+        return selected[:needed]
 
 
 class HighestScoreFirst(HostSelectionPolicy):
