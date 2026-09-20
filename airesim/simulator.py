@@ -117,7 +117,6 @@ class Simulator:
             rng=rng,
             auto_repair_time=p.auto_repair_time,
             manual_repair_time=p.manual_repair_time,
-            prob_auto_to_manual=p.prob_auto_to_manual,
             auto_repair_fail_prob=p.auto_repair_fail_prob,
             manual_repair_fail_prob=p.manual_repair_fail_prob,
             escalation_policy=self.escalation_policy,

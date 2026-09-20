@@ -46,7 +46,6 @@ class RepairShop:
         rng: random.Random,
         auto_repair_time: float,
         manual_repair_time: float,
-        prob_auto_to_manual: float,
         auto_repair_fail_prob: float,
         manual_repair_fail_prob: float,
         escalation_policy: RepairEscalationPolicy,
@@ -59,7 +58,6 @@ class RepairShop:
 
         self.auto_repair_time = auto_repair_time
         self.manual_repair_time = manual_repair_time
-        self.prob_auto_to_manual = prob_auto_to_manual
         self.auto_repair_fail_prob = auto_repair_fail_prob
         self.manual_repair_fail_prob = manual_repair_fail_prob
 
@@ -92,22 +90,25 @@ class RepairShop:
 
         self.stats.auto_repairs += 1
 
-        # Did auto repair handle it, or does it need escalation?
-        auto_handled = self.rng.random() >= self.prob_auto_to_manual
-        went_to_manual = False
+        # Did auto repair actually fix the issue?
+        auto_repair_succeeded = self.rng.random() >= self.auto_repair_fail_prob
 
-        if auto_handled:
-            # Auto repair reports success — but did it actually fix the issue?
-            actual_success = self.rng.random() >= self.auto_repair_fail_prob
-        else:
+        # Ask the escalation policy whether this should go to manual repair,
+        # now that the real outcome of the auto stage is known.
+        went_to_manual = self.escalation_policy.should_escalate(
+            server, auto_repair_succeeded, self.rng
+        )
+
+        if went_to_manual:
             # ── Stage 2: Manual repair ───────────────────────────────────
-            went_to_manual = True
             server.begin_manual_repair()
             manual_duration = self.rng.expovariate(1.0 / self.manual_repair_time)
             yield self.env.timeout(manual_duration)
 
             self.stats.manual_repairs += 1
             actual_success = self.rng.random() >= self.manual_repair_fail_prob
+        else:
+            actual_success = auto_repair_succeeded
 
         # ── Post-repair decision ─────────────────────────────────────────
         server.complete_repair(success=actual_success)

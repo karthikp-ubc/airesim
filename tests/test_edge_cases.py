@@ -44,15 +44,13 @@ def make_server(env, server_id=0, is_bad=False, random_failure_rate=0.0):
 
 
 def make_repair_shop(env, rng, pool_mgr, stats,
-                     auto_repair_time=1.0, manual_repair_time=1.0,
-                     prob_auto_to_manual=0.0):
+                     auto_repair_time=1.0, manual_repair_time=1.0):
     """Repair shop that always auto-repairs successfully and never removes servers."""
     return RepairShop(
         env=env,
         rng=rng,
         auto_repair_time=auto_repair_time,
         manual_repair_time=manual_repair_time,
-        prob_auto_to_manual=prob_auto_to_manual,
         auto_repair_fail_prob=0.0,        # auto repair always succeeds
         manual_repair_fail_prob=0.0,
         escalation_policy=DefaultRepairEscalation(prob_escalate=0.0),
@@ -289,7 +287,7 @@ def make_fixed_repair_shop(env, rng, pool_mgr, stats, fixed_repair_time):
         env=env, rng=rng,
         auto_repair_time=fixed_repair_time,
         manual_repair_time=fixed_repair_time,
-        prob_auto_to_manual=0.0, auto_repair_fail_prob=0.0,
+        auto_repair_fail_prob=0.0,
         manual_repair_fail_prob=0.0,
         escalation_policy=DefaultRepairEscalation(prob_escalate=0.0),
         removal_policy=NeverRemove(),

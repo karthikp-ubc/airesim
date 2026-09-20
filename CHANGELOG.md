@@ -4,6 +4,69 @@ All notable changes to AIReSim are recorded here.
 
 ---
 
+## [Unreleased] — 2026-09-20
+
+### Bug Fixes
+
+#### Bug: injected `RepairEscalationPolicy` was never consulted
+
+**Affected files:** `airesim/repairs.py`, `airesim/simulator.py`, `tests/test_edge_cases.py`
+
+**Symptom:** `RepairShop` stored the `escalation_policy` it was constructed with
+(`self.escalation_policy = escalation_policy`) but `_repair_process` never called
+`escalation_policy.should_escalate(...)`. Instead it recomputed the same decision
+inline with a bare probability draw, and did so *before* the auto-repair
+outcome was known:
+
+```python
+auto_handled = self.rng.random() >= self.prob_auto_to_manual
+```
+
+This broke `CLAUDE.md`'s "pluggable policies via dependency injection"
+invariant for `RepairEscalationPolicy` specifically: a user-supplied subclass
+of `RepairEscalationPolicy` had zero effect on simulation output, no matter
+what it returned. It also meant the *default* policy's own documented rule —
+`DefaultRepairEscalation.should_escalate` returns `False` whenever auto repair
+already succeeded, i.e. "only escalate work that's actually still broken" —
+was never enforced; escalation instead fired for a fixed fraction of *all*
+repairs regardless of outcome.
+
+**How it was found:** During an architecture-conformance review that traced
+every constructor-injected policy to its call site. `test_edge_cases.py`'s
+`make_repair_shop` helper always set both `prob_auto_to_manual` and
+`DefaultRepairEscalation(prob_escalate=...)` to the same value, so the two
+code paths were numerically indistinguishable in every existing test.
+
+**Fix:** `_repair_process` now computes `auto_repair_succeeded` first, then
+calls `self.escalation_policy.should_escalate(server, auto_repair_succeeded,
+self.rng)` to decide escalation — mirroring how `removal_policy.should_remove`
+is already called later in the same method. `RepairShop.__init__` no longer
+takes a `prob_auto_to_manual` parameter (it was only ever used by the inline
+check being removed); `Simulator` still builds
+`DefaultRepairEscalation(prob_escalate=params.prob_auto_to_manual)` as the
+default when no custom policy is supplied.
+
+**Impact:** This is a genuine simulation-semantics change for anyone relying
+on the default escalation policy, not just a fix for custom policies. Auto
+repairs that succeed are no longer sent to manual repair at all (previously
+~`prob_auto_to_manual` of them were, wasting `manual_repair_time` for no
+reason); only auto repairs that actually fail can escalate, and only with
+probability `prob_auto_to_manual`. This lowers the effective manual-repair
+rate and total repair time for any run with `auto_repair_fail_prob < 1.0`
+(the paper-default config uses `auto_repair_fail_prob=0.40`). Existing
+`docs/*_REPORT.md` figures that cite an "escalation rate" derived from
+`prob_auto_to_manual` alone predate this fix and should be regenerated before
+being cited again. All 97 pre-existing tests still pass unchanged — none
+asserted on absolute escalation/manual-repair counts.
+
+**New tests:** `tests/test_repair_escalation_policy.py` (7 tests) — proves a
+custom policy overrides `prob_auto_to_manual` in both directions, that
+`should_escalate` receives the real post-repair outcome rather than a
+precomputed guess, and that the default policy now correctly never escalates
+an auto repair that already succeeded.
+
+---
+
 ## [Unreleased] — 2026-08-05
 
 ### Bug Fixes
