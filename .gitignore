@@ -53,6 +53,7 @@ Thumbs.db
 
 # Simulation output
 *.csv
+!examples/diagnosis_realistic_figures/*.csv
 examples/figures/
 figures/
 results/
