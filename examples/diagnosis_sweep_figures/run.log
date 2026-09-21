@@ -1,0 +1,114 @@
+# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
+# started: 2026-09-21T15:18:20.607827
+# command: python3 examples/diagnosis_sweep.py
+
+========================================================================
+Diagnosis parameter sweep
+Regime: 20× multiplier | 75% manual repair fail | 4600-server pool
+Replications per cell: 8
+========================================================================
+
+Running baseline (Random + NeverRemove, full diagnosis)…
+  Baseline: 2394.6 ± 38.7 hrs
+
+════════════════════════════════════════════════════════════════════════
+Sweep: diagnosis_probability  (fixed: {'diagnosis_uncertainty': 0.0})
+════════════════════════════════════════════════════════════════════════
+  Scheduling       Retirement      Value  Mean (hrs)    Std        Δ  Retired
+  ---------------------------------------------------------------------------
+  Random           NeverRemove      0.00     3295.9h ±69.8   +901.3h     0.0ret
+  Random           Thresh ≥2/7d     0.00     3295.9h ±69.8   +901.3h     0.0ret
+  Random           ScoredRemoval    0.00     3295.9h ±69.8   +901.3h     0.0ret
+  FewestFailures   NeverRemove      0.00     3264.8h ±54.9   +870.2h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.00     3264.8h ±54.9   +870.2h     0.0ret
+  FewestFailures   ScoredRemoval    0.00     3264.8h ±54.9   +870.2h     0.0ret
+  Random           NeverRemove      0.20     3025.1h ±82.7   +630.4h     0.0ret
+  Random           Thresh ≥2/7d     0.20     2926.8h ±35.5   +532.2h    58.5ret
+  Random           ScoredRemoval    0.20     2976.7h ±63.3   +582.1h    73.8ret
+  FewestFailures   NeverRemove      0.20     2923.1h ±243.6   +528.4h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.20     2274.1h ±55.5   -120.6h    36.5ret
+  FewestFailures   ScoredRemoval    0.20     2351.8h ±42.9    -42.9h    27.8ret
+  Random           NeverRemove      0.40     2764.4h ±38.1   +369.8h     0.0ret
+  Random           Thresh ≥2/7d     0.40     2696.1h ±59.7   +301.5h    86.5ret
+  Random           ScoredRemoval    0.40     2618.5h ±37.0   +223.8h   179.8ret
+  FewestFailures   NeverRemove      0.40     2397.2h ±114.8     +2.5h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.40     2213.5h ±48.1   -181.2h    53.5ret
+  FewestFailures   ScoredRemoval    0.40     2198.3h ±39.9   -196.4h    72.6ret
+  Random           NeverRemove      0.60     2641.6h ±72.5   +247.0h     0.0ret
+  Random           Thresh ≥2/7d     0.60     2554.1h ±53.7   +159.4h   107.2ret
+  Random           ScoredRemoval    0.60     2391.8h ±48.7     -2.9h   263.1ret
+  FewestFailures   NeverRemove      0.60     2231.2h ±30.7   -163.5h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.60     2161.7h ±44.1   -233.0h    61.1ret
+  FewestFailures   ScoredRemoval    0.60     2127.8h ±24.2   -266.9h   142.6ret
+  Random           NeverRemove      0.80     2502.0h ±50.3   +107.3h     0.0ret
+  Random           Thresh ≥2/7d     0.80     2430.2h ±58.5    +35.5h   100.5ret
+  Random           ScoredRemoval    0.80     2227.2h ±33.1   -167.4h   336.4ret
+  FewestFailures   NeverRemove      0.80     2168.2h ±48.8   -226.5h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.80     2123.6h ±40.3   -271.0h    66.9ret
+  FewestFailures   ScoredRemoval    0.80     2121.0h ±36.5   -273.6h   229.5ret
+  Random           NeverRemove      1.00     2394.6h ±38.7     +0.0h     0.0ret
+  Random           Thresh ≥2/7d     1.00     2305.8h ±68.2    -88.8h   105.6ret
+  Random           ScoredRemoval    1.00     2083.0h ±37.1   -311.6h   388.2ret
+  FewestFailures   NeverRemove      1.00     2116.2h ±56.1   -278.4h     0.0ret
+  FewestFailures   Thresh ≥2/7d     1.00     2097.2h ±48.1   -297.5h    69.1ret
+  FewestFailures   ScoredRemoval    1.00     2064.5h ±35.5   -330.1h   334.8ret
+  Saved → /home/karthik/Programs/airesim/examples/diagnosis_sweep_figures/sweep_diagnosis_probability.png
+
+════════════════════════════════════════════════════════════════════════
+Sweep: diagnosis_uncertainty  (fixed: {'diagnosis_probability': 1.0})
+════════════════════════════════════════════════════════════════════════
+  Scheduling       Retirement      Value  Mean (hrs)    Std        Δ  Retired
+  ---------------------------------------------------------------------------
+  Random           NeverRemove      0.00     2394.6h ±38.7     +0.0h     0.0ret
+  Random           Thresh ≥2/7d     0.00     2305.8h ±68.2    -88.8h   105.6ret
+  Random           ScoredRemoval    0.00     2083.0h ±37.1   -311.6h   388.2ret
+  FewestFailures   NeverRemove      0.00     2116.2h ±56.1   -278.4h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.00     2097.2h ±48.1   -297.5h    69.1ret
+  FewestFailures   ScoredRemoval    0.00     2064.5h ±35.5   -330.1h   334.8ret
+  Random           NeverRemove      0.20     2547.7h ±53.3   +153.1h     0.0ret
+  Random           Thresh ≥2/7d     0.20     2394.3h ±62.2     -0.4h   108.0ret
+  Random           ScoredRemoval    0.20     2179.1h ±24.1   -215.6h   411.1ret
+  FewestFailures   NeverRemove      0.20     2148.7h ±58.9   -245.9h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.20     2142.0h ±57.6   -252.6h    68.1ret
+  FewestFailures   ScoredRemoval    0.20     2088.1h ±23.2   -306.5h   292.4ret
+  Random           NeverRemove      0.40     2605.3h ±56.8   +210.6h     0.0ret
+  Random           Thresh ≥2/7d     0.40     2501.4h ±65.1   +106.8h   111.9ret
+  Random           ScoredRemoval    0.40     2386.0h ±51.1     -8.7h   442.5ret
+  FewestFailures   NeverRemove      0.40     2238.6h ±70.2   -156.1h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.40     2158.0h ±34.0   -236.6h    60.8ret
+  FewestFailures   ScoredRemoval    0.40     2113.3h ±39.5   -281.3h   275.2ret
+  Random           NeverRemove      0.60     2744.4h ±63.4   +349.8h     0.0ret
+  Random           Thresh ≥2/7d     0.60     2678.1h ±64.3   +283.5h    93.8ret
+  Random           ScoredRemoval    0.60     2588.5h ±46.3   +193.8h   476.2ret
+  FewestFailures   NeverRemove      0.60     2225.4h ±36.4   -169.3h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.60     2197.4h ±42.0   -197.3h    48.6ret
+  FewestFailures   ScoredRemoval    0.60     2195.5h ±25.8   -199.1h   283.4ret
+  Random           NeverRemove      0.80     2944.0h ±76.7   +549.3h     0.0ret
+  Random           Thresh ≥2/7d     0.80     2882.0h ±35.8   +487.3h    60.5ret
+  Random           ScoredRemoval    0.80     2885.5h ±51.7   +490.8h   536.0ret
+  FewestFailures   NeverRemove      0.80     2309.4h ±59.3    -85.3h     0.0ret
+  FewestFailures   Thresh ≥2/7d     0.80     2208.6h ±43.7   -186.0h    30.6ret
+  FewestFailures   ScoredRemoval    0.80     2268.8h ±41.3   -125.8h   305.1ret
+  Random           NeverRemove      1.00     3191.5h ±50.4   +796.8h     0.0ret
+  Random           Thresh ≥2/7d     1.00     3158.7h ±36.4   +764.1h     4.9ret
+  Random           ScoredRemoval    1.00     3287.7h ±121.2   +893.1h   646.0ret DEPLETED
+  FewestFailures   NeverRemove      1.00     2316.0h ±64.6    -78.7h     0.0ret
+  FewestFailures   Thresh ≥2/7d     1.00     2326.7h ±74.8    -67.9h     2.1ret
+  FewestFailures   ScoredRemoval    1.00     2381.5h ±44.7    -13.2h   359.9ret
+  Saved → /home/karthik/Programs/airesim/examples/diagnosis_sweep_figures/sweep_diagnosis_uncertainty.png
+
+Saving combined overview …
+  Saved → /home/karthik/Programs/airesim/examples/diagnosis_sweep_figures/overview.png
+  Saved → /home/karthik/Programs/airesim/examples/diagnosis_sweep_figures/diagnosis_sweep.csv
+
+========================================================================
+Done.  Output → /home/karthik/Programs/airesim/examples/diagnosis_sweep_figures
+  diagnosis_sweep.csv  (5 KB)
+  overview.png  (299 KB)
+  run.log  (8 KB)
+  sweep_A.csv  (2 KB)
+  sweep_B.csv  (2 KB)
+  sweep_diagnosis_probability.png  (197 KB)
+  sweep_diagnosis_uncertainty.png  (164 KB)
+
+# finished: 2026-09-21T16:55:55.389053 exit=0

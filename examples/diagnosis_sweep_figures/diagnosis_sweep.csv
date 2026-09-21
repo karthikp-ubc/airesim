@@ -1,0 +1,74 @@
+sweep_param,param_value,scheduling,retirement,mean_time_hrs,std_time_hrs,mean_retired,mean_auto_repairs,depleted_frac
+,0.0,Random,NeverRemove,2394.64,38.69,0.0,2058.2,0.00
+diagnosis_probability,0.0,Random,NeverRemove,3295.93,69.76,0.0,0.0,0.00
+diagnosis_probability,0.0,Random,Thresh ≥2/7d,3295.93,69.76,0.0,0.0,0.00
+diagnosis_probability,0.0,Random,ScoredRemoval,3295.93,69.76,0.0,0.0,0.00
+diagnosis_probability,0.0,FewestFailures,NeverRemove,3264.80,54.95,0.0,0.0,0.00
+diagnosis_probability,0.0,FewestFailures,Thresh ≥2/7d,3264.80,54.95,0.0,0.0,0.00
+diagnosis_probability,0.0,FewestFailures,ScoredRemoval,3264.80,54.95,0.0,0.0,0.00
+diagnosis_probability,0.2,Random,NeverRemove,3025.07,82.70,0.0,540.2,0.00
+diagnosis_probability,0.2,Random,Thresh ≥2/7d,2926.79,35.51,58.5,528.0,0.00
+diagnosis_probability,0.2,Random,ScoredRemoval,2976.71,63.29,73.8,517.2,0.00
+diagnosis_probability,0.2,FewestFailures,NeverRemove,2923.06,243.60,0.0,510.1,0.00
+diagnosis_probability,0.2,FewestFailures,Thresh ≥2/7d,2274.08,55.48,36.5,392.8,0.00
+diagnosis_probability,0.2,FewestFailures,ScoredRemoval,2351.78,42.95,27.8,400.8,0.00
+diagnosis_probability,0.4,Random,NeverRemove,2764.42,38.15,0.0,972.2,0.00
+diagnosis_probability,0.4,Random,Thresh ≥2/7d,2696.09,59.74,86.5,931.9,0.00
+diagnosis_probability,0.4,Random,ScoredRemoval,2618.48,36.98,179.8,903.5,0.00
+diagnosis_probability,0.4,FewestFailures,NeverRemove,2397.16,114.79,0.0,822.2,0.00
+diagnosis_probability,0.4,FewestFailures,Thresh ≥2/7d,2213.47,48.06,53.5,756.8,0.00
+diagnosis_probability,0.4,FewestFailures,ScoredRemoval,2198.26,39.90,72.6,748.0,0.00
+diagnosis_probability,0.6,Random,NeverRemove,2641.62,72.49,0.0,1366.9,0.00
+diagnosis_probability,0.6,Random,Thresh ≥2/7d,2554.07,53.71,107.2,1309.5,0.00
+diagnosis_probability,0.6,Random,ScoredRemoval,2391.76,48.67,263.1,1221.0,0.00
+diagnosis_probability,0.6,FewestFailures,NeverRemove,2231.19,30.68,0.0,1145.6,0.00
+diagnosis_probability,0.6,FewestFailures,Thresh ≥2/7d,2161.67,44.10,61.1,1087.8,0.00
+diagnosis_probability,0.6,FewestFailures,ScoredRemoval,2127.77,24.15,142.6,1079.0,0.00
+diagnosis_probability,0.8,Random,NeverRemove,2501.96,50.26,0.0,1741.0,0.00
+diagnosis_probability,0.8,Random,Thresh ≥2/7d,2430.17,58.49,100.5,1673.6,0.00
+diagnosis_probability,0.8,Random,ScoredRemoval,2227.24,33.08,336.4,1503.4,0.00
+diagnosis_probability,0.8,FewestFailures,NeverRemove,2168.16,48.78,0.0,1462.8,0.00
+diagnosis_probability,0.8,FewestFailures,Thresh ≥2/7d,2123.62,40.26,66.9,1424.0,0.00
+diagnosis_probability,0.8,FewestFailures,ScoredRemoval,2121.03,36.52,229.5,1436.0,0.00
+diagnosis_probability,1.0,Random,NeverRemove,2394.64,38.69,0.0,2058.2,0.00
+diagnosis_probability,1.0,Random,Thresh ≥2/7d,2305.79,68.15,105.6,1969.1,0.00
+diagnosis_probability,1.0,Random,ScoredRemoval,2083.01,37.15,388.2,1745.6,0.00
+diagnosis_probability,1.0,FewestFailures,NeverRemove,2116.19,56.13,0.0,1779.9,0.00
+diagnosis_probability,1.0,FewestFailures,Thresh ≥2/7d,2097.18,48.15,69.1,1760.6,0.00
+diagnosis_probability,1.0,FewestFailures,ScoredRemoval,2064.49,35.55,334.8,1727.2,0.00
+diagnosis_uncertainty,0.0,Random,NeverRemove,2394.64,38.69,0.0,2058.2,0.00
+diagnosis_uncertainty,0.0,Random,Thresh ≥2/7d,2305.79,68.15,105.6,1969.1,0.00
+diagnosis_uncertainty,0.0,Random,ScoredRemoval,2083.01,37.15,388.2,1745.6,0.00
+diagnosis_uncertainty,0.0,FewestFailures,NeverRemove,2116.19,56.13,0.0,1779.9,0.00
+diagnosis_uncertainty,0.0,FewestFailures,Thresh ≥2/7d,2097.18,48.15,69.1,1760.6,0.00
+diagnosis_uncertainty,0.0,FewestFailures,ScoredRemoval,2064.49,35.55,334.8,1727.2,0.00
+diagnosis_uncertainty,0.2,Random,NeverRemove,2547.74,53.28,0.0,2211.4,0.00
+diagnosis_uncertainty,0.2,Random,Thresh ≥2/7d,2394.28,62.22,108.0,2057.6,0.00
+diagnosis_uncertainty,0.2,Random,ScoredRemoval,2179.07,24.06,411.1,1841.6,0.00
+diagnosis_uncertainty,0.2,FewestFailures,NeverRemove,2148.71,58.89,0.0,1812.4,0.00
+diagnosis_uncertainty,0.2,FewestFailures,Thresh ≥2/7d,2142.04,57.65,68.1,1805.5,0.00
+diagnosis_uncertainty,0.2,FewestFailures,ScoredRemoval,2088.13,23.23,292.4,1751.0,0.00
+diagnosis_uncertainty,0.4,Random,NeverRemove,2605.26,56.79,0.0,2268.9,0.00
+diagnosis_uncertainty,0.4,Random,Thresh ≥2/7d,2501.43,65.09,111.9,2164.8,0.00
+diagnosis_uncertainty,0.4,Random,ScoredRemoval,2385.96,51.13,442.5,2048.4,0.00
+diagnosis_uncertainty,0.4,FewestFailures,NeverRemove,2238.58,70.20,0.0,1902.2,0.00
+diagnosis_uncertainty,0.4,FewestFailures,Thresh ≥2/7d,2157.99,33.98,60.8,1821.5,0.00
+diagnosis_uncertainty,0.4,FewestFailures,ScoredRemoval,2113.33,39.51,275.2,1776.2,0.00
+diagnosis_uncertainty,0.6,Random,NeverRemove,2744.43,63.35,0.0,2408.0,0.00
+diagnosis_uncertainty,0.6,Random,Thresh ≥2/7d,2678.14,64.29,93.8,2341.5,0.00
+diagnosis_uncertainty,0.6,Random,ScoredRemoval,2588.48,46.29,476.2,2247.2,0.00
+diagnosis_uncertainty,0.6,FewestFailures,NeverRemove,2225.38,36.35,0.0,1889.0,0.00
+diagnosis_uncertainty,0.6,FewestFailures,Thresh ≥2/7d,2197.38,42.03,48.6,1860.9,0.00
+diagnosis_uncertainty,0.6,FewestFailures,ScoredRemoval,2195.51,25.82,283.4,1858.4,0.00
+diagnosis_uncertainty,0.8,Random,NeverRemove,2943.95,76.66,0.0,2607.5,0.00
+diagnosis_uncertainty,0.8,Random,Thresh ≥2/7d,2881.96,35.76,60.5,2545.4,0.00
+diagnosis_uncertainty,0.8,Random,ScoredRemoval,2885.47,51.68,536.0,2527.6,0.00
+diagnosis_uncertainty,0.8,FewestFailures,NeverRemove,2309.36,59.29,0.0,1973.0,0.00
+diagnosis_uncertainty,0.8,FewestFailures,Thresh ≥2/7d,2208.59,43.71,30.6,1872.1,0.00
+diagnosis_uncertainty,0.8,FewestFailures,ScoredRemoval,2268.80,41.31,305.1,1931.6,0.00
+diagnosis_uncertainty,1.0,Random,NeverRemove,3191.49,50.41,0.0,2855.0,0.00
+diagnosis_uncertainty,1.0,Random,Thresh ≥2/7d,3158.71,36.43,4.9,2822.2,0.00
+diagnosis_uncertainty,1.0,Random,ScoredRemoval,3287.71,121.23,646.0,2871.4,0.12
+diagnosis_uncertainty,1.0,FewestFailures,NeverRemove,2315.99,64.62,0.0,1979.6,0.00
+diagnosis_uncertainty,1.0,FewestFailures,Thresh ≥2/7d,2326.75,74.83,2.1,1990.4,0.00
+diagnosis_uncertainty,1.0,FewestFailures,ScoredRemoval,2381.47,44.69,359.9,2044.1,0.00
