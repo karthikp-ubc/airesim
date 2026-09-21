@@ -28,19 +28,38 @@ from airesim.scheduling_policies import (  # noqa: F401
 # ── Repair escalation ────────────────────────────────────────────────────────
 
 class RepairEscalationPolicy(ABC):
-    """Decide whether a server should be escalated from auto to manual repair."""
+    """Decide whether a server should be escalated from auto to manual repair.
+
+    ``uses_auto_outcome`` says whether the decision depends on the auto-repair
+    outcome.  When ``True`` (the default, so existing subclasses keep working),
+    ``RepairShop`` samples the auto-repair outcome first and passes it as a
+    ``bool``.  When ``False``, ``RepairShop`` asks for the decision first,
+    passes ``None``, and only samples the auto-repair outcome if the server is
+    not escalated -- the order in which the paper's model (and the original
+    simulator) draws random numbers.
+    """
+
+    uses_auto_outcome: bool = True
 
     @abstractmethod
     def should_escalate(
-        self, server: "Server", auto_repair_succeeded: bool, rng: random.Random
+        self, server: "Server", auto_repair_succeeded: bool | None, rng: random.Random
     ) -> bool:
         """Return True if the server should go to manual repair."""
         ...
 
 
 class DefaultRepairEscalation(RepairEscalationPolicy):
-    """Escalate to manual repair with a fixed probability when auto repair
-    determines it cannot handle the issue."""
+    """Escalate to manual repair with a fixed probability (the DSN'26 paper's model).
+
+    ``prob_escalate`` (``Params.prob_auto_to_manual``) is the probability that
+    auto repair determines the problem is beyond its scope and hands the server
+    to manual repair.  It is independent of ``auto_repair_fail_prob``, which
+    models a *silent* failure -- auto repair reports success but the fault
+    persists -- so the escalation decision cannot depend on that outcome.
+    """
+
+    uses_auto_outcome = False
 
     def __init__(self, prob_escalate: float = 0.80):
         self.prob_escalate = prob_escalate
@@ -48,7 +67,32 @@ class DefaultRepairEscalation(RepairEscalationPolicy):
     def should_escalate(
         self,
         server: "Server",
-        auto_repair_succeeded: bool,
+        auto_repair_succeeded: bool | None,
+        rng: random.Random,
+    ) -> bool:
+        """Return True with probability ``prob_escalate``, ignoring the auto outcome."""
+        return rng.random() < self.prob_escalate
+
+
+class EscalateOnDetectedFailure(RepairEscalationPolicy):
+    """Escalate with probability ``prob_escalate`` only if auto repair failed.
+
+    NOT the paper's model.  This assumes auto-repair failures are *observable*
+    (the operator learns that the repair did not work) and never escalates a
+    repair that succeeded.  In the paper, auto-repair failures are silent, so
+    the default policy (``DefaultRepairEscalation``) cannot condition on them.
+    Use this policy to study what detecting auto-repair failures would be worth.
+    """
+
+    uses_auto_outcome = True
+
+    def __init__(self, prob_escalate: float = 0.80):
+        self.prob_escalate = prob_escalate
+
+    def should_escalate(
+        self,
+        server: "Server",
+        auto_repair_succeeded: bool | None,
         rng: random.Random,
     ) -> bool:
         """Return True with probability ``prob_escalate`` when auto repair failed."""

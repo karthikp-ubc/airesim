@@ -90,11 +90,12 @@ class RepairShop:
 
         self.stats.auto_repairs += 1
 
-        # Did auto repair actually fix the issue?
-        auto_repair_succeeded = self.rng.random() >= self.auto_repair_fail_prob
-
-        # Ask the escalation policy whether this should go to manual repair,
-        # now that the real outcome of the auto stage is known.
+        # Policies that ignore the auto outcome (the paper's model) decide first and
+        # the outcome is only sampled if the server is not escalated; policies that
+        # use it get the sampled outcome up front.
+        auto_repair_succeeded: bool | None = None
+        if self.escalation_policy.uses_auto_outcome:
+            auto_repair_succeeded = self.rng.random() >= self.auto_repair_fail_prob
         went_to_manual = self.escalation_policy.should_escalate(
             server, auto_repair_succeeded, self.rng
         )
@@ -108,6 +109,9 @@ class RepairShop:
             self.stats.manual_repairs += 1
             actual_success = self.rng.random() >= self.manual_repair_fail_prob
         else:
+            # Auto repair reports success -- but did it actually fix the issue?
+            if auto_repair_succeeded is None:
+                auto_repair_succeeded = self.rng.random() >= self.auto_repair_fail_prob
             actual_success = auto_repair_succeeded
 
         # ── Post-repair decision ─────────────────────────────────────────

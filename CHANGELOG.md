@@ -6,6 +6,59 @@ All notable changes to AIReSim are recorded here.
 
 ## [Unreleased] — 2026-09-21
 
+### Changes
+
+#### Revert: default escalation policy restored to the DSN'26 paper's model
+
+**Affected files:** `airesim/policies.py`, `airesim/repairs.py`,
+`tests/test_repair_escalation_policy.py`, `tests/test_prefix_equivalence.py` (new),
+`tests/prefix_cases.py` (new), `tests/generate_prefix_golden.py` (new),
+`tests/data/prefix_golden.json` (new)
+
+**What stands and what is reverted.** Commit `8896140` did two things. The
+*wiring fix* stands: `RepairShop` consults the injected `RepairEscalationPolicy`
+(and no longer takes a `prob_auto_to_manual` argument). The *semantics change* is
+reverted: that commit made the default policy escalate only when auto repair had
+failed.
+
+**Why.** In the paper, `prob_auto_to_manual` is the probability that auto repair
+determines the problem is beyond its scope and escalates. It is independent of
+`auto_repair_fail_prob`, which is a *silent* failure (the status says the repair
+succeeded), so escalation cannot condition on it. `8896140` inferred the intended
+behaviour from `DefaultRepairEscalation`'s code and its `auto_repair_succeeded`
+argument, which contradicted that class's own docstring ("escalate ... when auto
+repair determines it cannot handle the issue"), and did not check it against the
+paper. Under the reverted semantics the escalation rate was
+`auto_repair_fail_prob x prob_auto_to_manual` (32% at the Table I defaults)
+instead of `prob_auto_to_manual` (80%), so manual repairs, repair failure rates and
+training times differed from the paper's model.
+
+**Now.**
+- `DefaultRepairEscalation` escalates with probability `prob_escalate` regardless of
+  the auto-repair outcome.
+- `EscalateOnDetectedFailure` keeps the `8896140` behaviour (escalate with
+  probability `prob_escalate` only if auto repair failed). Its docstring states it
+  assumes auto-repair failures are observable, which the paper does not.
+- `RepairEscalationPolicy.uses_auto_outcome` (default `True`, so existing subclasses
+  are unaffected) selects the random-number order: `False` policies decide first,
+  receive `auto_repair_succeeded=None`, and the auto outcome is drawn only if the
+  server is not escalated. This is the pre-`8896140` order, which is what makes the
+  default bit-identical.
+
+**Verification.** `tests/test_prefix_equivalence.py` compares against golden values
+generated from `9c7168c` (the commit before `8896140`): six small-cluster cases, and
+`config.yaml` at seeds 42-71 with `diagnosis_probability` 1.0 and 0.8 (the
+`SIMULATION_REPORT.md` and `sanity.csv` seeds). Every statistic, including the exact
+float training time, matches; the 60-run check is enabled with
+`AIRESIM_FULL_EQUIVALENCE=1`. Custom policies remain honoured (`test_repair_escalation_policy.py`).
+
+**Impact.** Anything generated between `8896140` and this change used the
+outcome-conditioned semantics. For example, `config.yaml` seeds 42-71 give a mean
+training time of 9,872.90 h under the paper's model versus 9,832.33 h under the
+reverted semantics. The reports and CSVs from that period have not been regenerated.
+
+---
+
 ### New Features
 
 #### `Server.attributed_failure_count` and `FewestAttributedFailuresFirst`
@@ -22,8 +75,9 @@ sorts by it, giving a scheduler that uses only operator-visible information.
 The existing `FewestFailuresFirst` is unchanged. `StatsCollector` also gains
 `misattributed_repairs` (repair sent to a server that did not fail) and
 `nonfaulty_repairs` (repair submitted for a server with `is_bad == False`).
-None of this consumes RNG: seeds 42-71 on `config.yaml` still reproduce the
-`SIMULATION_REPORT.md` mean (9,832.325 h) exactly.
+None of this consumes RNG: seeds 42-71 on `config.yaml` reproduced the then-current
+`SIMULATION_REPORT.md` mean (9,832.325 h, outcome-conditioned escalation; see the
+revert entry above) exactly.
 
 ---
 
@@ -32,6 +86,11 @@ None of this consumes RNG: seeds 42-71 on `config.yaml` still reproduce the
 ### Bug Fixes
 
 #### Bug: injected `RepairEscalationPolicy` was never consulted
+
+> **Status (2026-09-21):** the wiring fix below stands, but the *semantics change*
+> (escalating only when auto repair failed, and the Impact paragraph's conclusions
+> about escalation rates) is reverted; see "Revert: default escalation policy
+> restored to the DSN'26 paper's model" above.
 
 **Affected files:** `airesim/repairs.py`, `airesim/simulator.py`, `tests/test_edge_cases.py`
 

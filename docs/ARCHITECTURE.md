@@ -385,7 +385,8 @@ backward compatibility.
 | Class | Type | Description |
 |-------|------|-------------|
 | `RepairEscalationPolicy` | ABC | Should auto repair escalate to manual? |
-| `DefaultRepairEscalation` | concrete | Fixed probability of escalation |
+| `DefaultRepairEscalation` | concrete | Escalate with probability `prob_auto_to_manual`, independent of the silent auto-repair failure (the DSN'26 paper's model) |
+| `EscalateOnDetectedFailure` | concrete | Escalate with that probability only if auto repair failed; assumes auto-repair failures are observable (not the paper's model) |
 | `ServerRemovalPolicy` | ABC | Should a repaired server be permanently retired? |
 | `NeverRemove` | concrete | Always reintegrate |
 | `ThresholdRemoval` | concrete | Retire if failures in rolling window ≥ threshold |
