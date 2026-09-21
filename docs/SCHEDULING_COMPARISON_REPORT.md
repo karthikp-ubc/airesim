@@ -13,6 +13,19 @@
 > interaction" finding does not reproduce post-fix** — see the rewritten
 > section for what replaced it.
 
+> **Design caveat (2026-09-21).** In AIReSim the scheduling policy is consulted
+> only at full host selection. Warm-standby swaps take the oldest standby
+> (`Scheduler.swap_in_standby`) without consulting the policy, and repaired
+> servers that were in the job return to the standby list regardless of failure
+> history. The `FewestFailuresFirst`/`HighestScoreFirst` results below therefore
+> measure the policy's effect at the host selections that happen when the job
+> exhausts its warm standbys. They do not measure health-aware replacement as an
+> operator would implement it. The number of full host selections per run was not
+> recorded for this sweep. At the paper defaults it is about 16 per run against
+> ~11,000 failures (`DIAGNOSIS_REALISTIC_REPORT.md`). `FewestFailuresFirst` here
+> also reads ground-truth failure counts (see `DIAGNOSIS_REALISTIC_REPORT.md` for
+> the attributed-count variant).
+
 ## 1. Executive Summary
 
 This report tests all 3×3 = 9 combinations of scheduling policy and retirement policy
@@ -32,9 +45,10 @@ in the payoff regime (20× failure multiplier, 75% manual repair fail probabilit
   means fewer bad servers are perpetually broken for scheduling to route
   around.
 
-- **`Random + ScoredRemoval` is still the best overall combination (−83.1h vs
-  baseline)**, down from a previously reported −158h, and still beats every
-  non-random scheduling + retirement combination.
+- **`Random + ScoredRemoval` (−83.1h vs baseline, down from a previously
+  reported −158h) and `FewestFailures/HighestScore + ScoredRemoval` (−90.2h) are
+  statistically tied for best.** The 7.1h gap is well inside the per-cell
+  standard error of roughly ±11–15h. Both beat every other combination.
 
 - **The "antagonistic interaction" reported previously does not reproduce.**
   Pre-fix, adding smart scheduling to `ScoredRemoval` cost 15.5h (−158.3h →
@@ -185,12 +199,13 @@ comfortably staff the job (4112 needed), so the bad servers are effectively benc
 
 ---
 
-## 8. Finding 3 — `Random + ScoredRemoval` Still Beats Every Non-Random Combination
+## 8. Finding 3 — `ScoredRemoval` Combinations Are Tied for Best
 
-The best single combination is `Random + ScoredRemoval` at **1992.9h** (−83.1h vs
-baseline, down from −158.3h pre-fix). It no longer beats *every* combination outright —
-`FewestFailures/HighestScore + ScoredRemoval` (−90.2h) now edges narrowly ahead of it
-(§9) — but it remains the best combination that doesn't also require smart scheduling:
+`Random + ScoredRemoval` reaches **1992.9h** (−83.1h vs baseline, down from −158.3h
+pre-fix). `FewestFailures/HighestScore + ScoredRemoval` reaches −90.2h (§9). The 7.1h
+difference is within the per-cell standard error of roughly ±11–15h, so the two are
+statistically indistinguishable. Neither should be called the single best combination.
+`Random + ScoredRemoval` is the best option that does not also require smart scheduling:
 
 | Combination | Δ vs baseline |
 |---|---|

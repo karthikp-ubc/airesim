@@ -179,7 +179,70 @@ def build(data, rows, sanity_rows):
       "gives essentially no variance reduction; the paired-t intervals are valid but "
       "not tighter than unpaired ones.\n")
 
+    w("## 6. Accounting identity\n")
+    w("In every run, training time equals job_length + total_failures × recovery_time "
+      "+ host_selection_count × host_selection_time (preemption waits and stalls are zero "
+      "in this sweep). AIReSim charges exactly one `recovery_time` per failure and no "
+      "lost work since the last checkpoint. Any effect of diagnosis quality or policy on "
+      "training time is therefore exactly its effect on the number of failures.\n")
+    res = identity_residuals(rows)
+    w(f"Maximum absolute residual of that identity over all {len(rows)} runs: "
+      f"{max(res):.2e} h.\n")
+    w("| prob | mult | policy | unc | Δ time (h) | Δ failures | Δ failures × recovery (h) |")
+    w("|---|---|---|---|---|---|---|")
+    for prob, mult, pol, u, dT, dF, pred, _ in mechanism_rows(data):
+        w(f"| {prob} | {mult:g} | {POLICY_LABEL[pol]} | {u} | {dT:+.1f} | {dF:+.1f} | "
+          f"{pred:+.1f} |")
+    w("")
+    w("The two columns differ only by the host-selection term (a few minutes per "
+      "selection).\n")
+
     return out, corrs
+
+
+def mechanism_rows(data):
+    """Per cell (u > 0): paired Δ training time vs Δ total_failures × recovery_time.
+
+    Returns a list of (prob, mult, policy, u, dT_hours, dF, predicted_hours, ratio).
+    recovery_time is read from the stored Params (minutes).
+    """
+    import json
+    out = []
+    for prob, mults in PROBS.items():
+        for mult in mults:
+            for pol in POLICIES:
+                base = data.get((prob, mult, pol, 0.0))
+                if not base:
+                    continue
+                rec_min = json.loads(next(iter(base.values()))["params_json"])["recovery_time"]
+                for u in UNCS:
+                    if u == 0.0 or (prob, mult, pol, u) not in data:
+                        continue
+                    cell = data[(prob, mult, pol, u)]
+                    dT, _, _, _ = paired(cell, base)
+                    dF, _, _, _ = paired(cell, base, field="total_failures")
+                    pred = dF * rec_min / 60.0
+                    out.append((prob, mult, pol, u, dT, dF, pred, dT / pred if pred else float("nan")))
+    return out
+
+
+def identity_residuals(rows):
+    """|training_time - (job_length + failures*recovery + host_selections*hs_time)| in hours."""
+    import json
+    out = []
+    for r in rows:
+        p = json.loads(r["params_json"])
+        pred = (p["job_length"] + float(r["total_failures"]) * p["recovery_time"]
+                + float(r["host_selection_count"]) * p["host_selection_time"]) / 60.0
+        out.append(abs(float(r["training_time_hrs"]) - pred))
+    return out
+
+
+def design_stats(rows):
+    """Mean full host selections and mean failures per run, over all rows."""
+    hs = [float(r["host_selection_count"]) for r in rows]
+    tf = [float(r["total_failures"]) for r in rows]
+    return statistics.mean(hs), min(hs), max(hs), statistics.mean(tf)
 
 
 def criterion(data):
@@ -228,14 +291,7 @@ def contrast_counts(data):
     return sig, tot
 
 
-def headroom_of(data):
-    import json
-    row = next(iter(next(iter(data.values())).values()))
-    p = json.loads(row["params_json"])
-    return p["working_pool_size"] - p["job_size"] - p["warm_standbys"]
-
-
-def verdict(data):
+def verdict(data, rows):
     c = criterion(data)
     fa = faff_assessment(data)
     u2, u1 = c[0.2], c[0.1]
@@ -266,7 +322,7 @@ def verdict(data):
     lo = min(v["fff_minus_random"] - v["half"] for v in fa.values())
     ref = statistics.mean(vals(data[(0.8, 5.0, "Random", 0.0)], "training_time_hrs"))
     n_sig, n_tot = contrast_counts(data)
-    headroom = headroom_of(data)
+    hs_mean, hs_min, hs_max, tf_mean = design_stats(rows)
     if any_benefit:
         lines.append("Oracle FFF beats Random at uncertainty 0 (paired 95% CI excludes 0) at "
                      f"multiplier(s) {', '.join(f'{m:g}' for m in any_benefit)}; see §4 for "
@@ -279,9 +335,28 @@ def verdict(data):
             f"{-lo:.0f} h, about {-100 * lo / ref:.1f}% of training time, is excluded). "
             f"Across all {n_tot} paired policy contrasts in §4, {n_sig} have a 95% CI "
             f"excluding zero (about {0.05 * n_tot:.0f} expected by chance, no multiplicity "
-            f"adjustment). The working pool has only {headroom} servers of headroom above "
-            "the job's requirement at these parameters, leaving host selection little "
-            "room to steer around bad servers.")
+            f"adjustment).")
+        lines.append(
+            "This null result reflects AIReSim's design rather than scheduling in "
+            "general. The scheduling policy is consulted only at full host selection. "
+            "Warm-standby swaps (`Scheduler.swap_in_standby`) take the oldest standby "
+            "without consulting the policy, and repaired servers that were in the job "
+            "return to the standby list regardless of failure history. Across all "
+            f"{len(rows)} runs, full host selection happened {hs_mean:.1f} times per run "
+            f"on average (range {hs_min:.0f}–{hs_max:.0f}) against {tf_mean:,.0f} failures, "
+            f"so {100 * (1 - hs_mean / tf_mean):.2f}% of replacements bypassed the policy. "
+            "FFF and FAFF therefore had almost no opportunity to act, and these runs "
+            "cannot tell whether health-aware replacement would help at realistic "
+            "parameters.")
+    worst = max(identity_residuals(rows))
+    lines.append(
+        "The misattribution cost is an accounting consequence of extra failures. In "
+        "AIReSim, training time is exactly job_length + failures × recovery_time + "
+        "host selections × host_selection_time (largest residual over all runs "
+        f"{worst:.1e} h; §6). Misattribution leaves faulty servers unrepaired, they fail "
+        "again, and each extra failure costs one recovery. The model charges no lost "
+        "work since the last checkpoint, so a failure's cost does not depend on when it "
+        "occurs.")
     return lines, c, fa
 
 
@@ -321,7 +396,7 @@ def main():
     rows, data = load(RESULTS_CSV)
     sanity_rows = list(csv.DictReader(open(SANITY_CSV, newline="")))
     body, corrs = build(data, rows, sanity_rows)
-    vlines, crit, fa = verdict(data)
+    vlines, crit, fa = verdict(data, rows)
     text = "\n".join(body)
     print(text)
     print("\n--- criterion ---")

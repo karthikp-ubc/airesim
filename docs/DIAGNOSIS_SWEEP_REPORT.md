@@ -30,6 +30,19 @@ Figures: `examples/diagnosis_sweep_figures/`
 >    while it was still in `active_servers`, potentially adding it to `warm_standbys` and
 >    creating a duplicate in `active_servers` on the next standby swap.
 
+> **Design caveat (2026-09-21).** In AIReSim the scheduling policy is consulted
+> only at full host selection. Warm-standby swaps take the oldest standby
+> (`Scheduler.swap_in_standby`) without consulting the policy, and repaired
+> servers that were in the job return to the standby list regardless of failure
+> history. The `FewestFailuresFirst`/`HighestScoreFirst` results below therefore
+> measure the policy's effect at the host selections that happen when the job
+> exhausts its warm standbys. They do not measure health-aware replacement as an
+> operator would implement it. The number of full host selections per run was not
+> recorded for this sweep. At the paper defaults it is about 16 per run against
+> ~11,000 failures (`DIAGNOSIS_REALISTIC_REPORT.md`). `FewestFailuresFirst` here
+> also reads ground-truth failure counts (see `DIAGNOSIS_REALISTIC_REPORT.md` for
+> the attributed-count variant).
+
 ---
 
 ## 1  Parameter definitions

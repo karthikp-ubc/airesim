@@ -10,7 +10,11 @@
 
 The effect is nonetheless small but detectable, and it grows with uncertainty: for Random at uncertainty 0.5 (outside the pre-registered range) training time rises +1.40% (95% CI +1.23% to +1.57%) at multiplier 5 and +2.04% (+1.82% to +2.26%) at multiplier 10.
 
-Whether FewestAttributedFailuresFirst retains the benefit of oracle FFF is moot here: oracle FFF shows no measurable benefit over Random even at uncertainty 0 (paired 95% CIs include 0 at all three multipliers; a benefit larger than 21 h, about 0.2% of training time, is excluded). Across all 59 paired policy contrasts in §4, 2 have a 95% CI excluding zero (about 3 expected by chance, no multiplicity adjustment). The working pool has only 48 servers of headroom above the job's requirement at these parameters, leaving host selection little room to steer around bad servers.
+Whether FewestAttributedFailuresFirst retains the benefit of oracle FFF is moot here: oracle FFF shows no measurable benefit over Random even at uncertainty 0 (paired 95% CIs include 0 at all three multipliers; a benefit larger than 21 h, about 0.2% of training time, is excluded). Across all 59 paired policy contrasts in §4, 2 have a 95% CI excluding zero (about 3 expected by chance, no multiplicity adjustment).
+
+This null result reflects AIReSim's design rather than scheduling in general. The scheduling policy is consulted only at full host selection. Warm-standby swaps (`Scheduler.swap_in_standby`) take the oldest standby without consulting the policy, and repaired servers that were in the job return to the standby list regardless of failure history. Across all 1200 runs, full host selection happened 16.3 times per run on average (range 9–28) against 11,376 failures, so 99.86% of replacements bypassed the policy. FFF and FAFF therefore had almost no opportunity to act, and these runs cannot tell whether health-aware replacement would help at realistic parameters.
+
+The misattribution cost is an accounting consequence of extra failures. In AIReSim, training time is exactly job_length + failures × recovery_time + host selections × host_selection_time (largest residual over all runs 1.1e-10 h; §6). Misattribution leaves faulty servers unrepaired, they fail again, and each extra failure costs one recovery. The model charges no lost work since the last checkpoint, so a failure's cost does not depend on when it occurs.
 
 ---
 
@@ -141,6 +145,65 @@ Random + NeverRemove, `config.yaml` defaults, uncertainty 0, seeds 42-71 (30 rep
 ## 5. Pairing
 
 All components share one RNG, and `rng.random() < diagnosis_uncertainty` is only drawn when uncertainty > 0, so runs with the same seed diverge at the first failure (and Random vs FFF at the first host selection). Only the initial bad-server layout is shared. Mean seed-wise correlation between an uncertainty-u run and its uncertainty-0 counterpart: +0.10 (n = 48 comparisons), i.e. pairing gives essentially no variance reduction; the paired-t intervals are valid but not tighter than unpaired ones.
+
+## 6. Accounting identity
+
+In every run, training time equals job_length + total_failures × recovery_time + host_selection_count × host_selection_time (preemption waits and stalls are zero in this sweep). AIReSim charges exactly one `recovery_time` per failure and no lost work since the last checkpoint. Any effect of diagnosis quality or policy on training time is therefore exactly its effect on the number of failures.
+
+Maximum absolute residual of that identity over all 1200 runs: 1.15e-10 h.
+
+| prob | mult | policy | unc | Δ time (h) | Δ failures | Δ failures × recovery (h) |
+|---|---|---|---|---|---|---|
+| 0.8 | 3 | Random | 0.1 | +38.4 | +115.1 | +38.4 |
+| 0.8 | 3 | Random | 0.2 | +63.6 | +190.9 | +63.6 |
+| 0.8 | 3 | Random | 0.3 | +76.3 | +228.9 | +76.3 |
+| 0.8 | 3 | Random | 0.5 | +139.8 | +419.6 | +139.8 |
+| 0.8 | 3 | FFF (oracle) | 0.1 | +21.1 | +63.3 | +21.1 |
+| 0.8 | 3 | FFF (oracle) | 0.2 | +30.2 | +90.5 | +30.2 |
+| 0.8 | 3 | FFF (oracle) | 0.3 | +60.7 | +182.0 | +60.7 |
+| 0.8 | 3 | FFF (oracle) | 0.5 | +111.3 | +333.8 | +111.3 |
+| 0.8 | 3 | FAFF (attributed) | 0.1 | +16.6 | +49.9 | +16.6 |
+| 0.8 | 3 | FAFF (attributed) | 0.2 | +45.9 | +137.7 | +45.9 |
+| 0.8 | 3 | FAFF (attributed) | 0.3 | +69.4 | +208.2 | +69.4 |
+| 0.8 | 3 | FAFF (attributed) | 0.5 | +137.2 | +411.4 | +137.2 |
+| 0.8 | 5 | Random | 0.1 | +23.4 | +70.3 | +23.4 |
+| 0.8 | 5 | Random | 0.2 | +34.3 | +102.8 | +34.3 |
+| 0.8 | 5 | Random | 0.3 | +78.4 | +235.1 | +78.3 |
+| 0.8 | 5 | Random | 0.5 | +138.6 | +415.9 | +138.7 |
+| 0.8 | 5 | FFF (oracle) | 0.1 | +23.1 | +69.3 | +23.1 |
+| 0.8 | 5 | FFF (oracle) | 0.2 | +57.3 | +171.8 | +57.3 |
+| 0.8 | 5 | FFF (oracle) | 0.3 | +66.8 | +200.5 | +66.8 |
+| 0.8 | 5 | FFF (oracle) | 0.5 | +151.6 | +454.8 | +151.6 |
+| 0.8 | 5 | FAFF (attributed) | 0.1 | +32.5 | +97.6 | +32.5 |
+| 0.8 | 5 | FAFF (attributed) | 0.2 | +57.9 | +173.8 | +57.9 |
+| 0.8 | 5 | FAFF (attributed) | 0.3 | +74.3 | +222.8 | +74.2 |
+| 0.8 | 5 | FAFF (attributed) | 0.5 | +172.9 | +518.7 | +172.9 |
+| 0.8 | 10 | Random | 0.1 | +38.1 | +114.2 | +38.1 |
+| 0.8 | 10 | Random | 0.2 | +60.7 | +182.1 | +60.7 |
+| 0.8 | 10 | Random | 0.3 | +96.2 | +288.4 | +96.2 |
+| 0.8 | 10 | Random | 0.5 | +202.5 | +607.2 | +202.4 |
+| 0.8 | 10 | FFF (oracle) | 0.1 | +24.3 | +72.8 | +24.3 |
+| 0.8 | 10 | FFF (oracle) | 0.2 | +72.1 | +216.3 | +72.1 |
+| 0.8 | 10 | FFF (oracle) | 0.3 | +105.8 | +317.4 | +105.8 |
+| 0.8 | 10 | FFF (oracle) | 0.5 | +213.5 | +640.1 | +213.4 |
+| 0.8 | 10 | FAFF (attributed) | 0.1 | +30.4 | +91.2 | +30.4 |
+| 0.8 | 10 | FAFF (attributed) | 0.2 | +63.0 | +189.1 | +63.0 |
+| 0.8 | 10 | FAFF (attributed) | 0.3 | +112.8 | +338.5 | +112.8 |
+| 0.8 | 10 | FAFF (attributed) | 0.5 | +214.1 | +642.0 | +214.0 |
+| 1.0 | 5 | Random | 0.1 | +13.3 | +39.9 | +13.3 |
+| 1.0 | 5 | Random | 0.2 | +55.6 | +166.9 | +55.6 |
+| 1.0 | 5 | Random | 0.3 | +83.8 | +251.4 | +83.8 |
+| 1.0 | 5 | Random | 0.5 | +129.5 | +388.6 | +129.5 |
+| 1.0 | 5 | FFF (oracle) | 0.1 | +5.5 | +16.6 | +5.5 |
+| 1.0 | 5 | FFF (oracle) | 0.2 | +42.2 | +126.5 | +42.2 |
+| 1.0 | 5 | FFF (oracle) | 0.3 | +59.4 | +178.2 | +59.4 |
+| 1.0 | 5 | FFF (oracle) | 0.5 | +123.2 | +369.5 | +123.2 |
+| 1.0 | 5 | FAFF (attributed) | 0.1 | +25.0 | +75.0 | +25.0 |
+| 1.0 | 5 | FAFF (attributed) | 0.2 | +34.6 | +103.8 | +34.6 |
+| 1.0 | 5 | FAFF (attributed) | 0.3 | +65.0 | +194.8 | +64.9 |
+| 1.0 | 5 | FAFF (attributed) | 0.5 | +130.6 | +391.8 | +130.6 |
+
+The two columns differ only by the host-selection term (a few minutes per selection).
 
 ## Figure
 
