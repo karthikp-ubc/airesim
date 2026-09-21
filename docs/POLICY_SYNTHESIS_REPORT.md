@@ -1,7 +1,7 @@
 # Policy Synthesis and Deployment Recommendations
 
-**Scope:** Synthesizes findings across six AIReSim reports — the paper-default
-configuration (`SIMULATION_REPORT.md`) and a stress-tested "payoff regime"
+**Scope:** Synthesizes findings across seven AIReSim reports — the paper-default
+configuration (`SIMULATION_REPORT.md`, `DIAGNOSIS_REALISTIC_REPORT.md`) and a stress-tested "payoff regime"
 (elevated failure rate, aggressive bad-server multiplier, tight repair
 budgets) swept across failure severity, repair quality, bad-server fraction,
 scheduling policy, and diagnosis quality (`RETIREMENT_POLICY_REPORT.md`,
@@ -20,13 +20,16 @@ which repair or retirement policy is in use. Warm standbys absorb 99.8% of
 failures in place; the spare pool and retirement policies are essentially
 idle at this scale of failure.
 
-**2. `FewestFailuresFirst` scheduling is the strongest general-purpose
-lever.** It costs nothing — no capacity loss, no depletion risk, no tuning —
-and is diagnosis-agnostic: it orders servers by raw failure count, which
-stays accurate even when failures are misattributed to the wrong server.
-Across a 5×5 severity grid (failure multiplier × repair fail probability) it
-wins outright in the most cells (12/25) and beats `ScoredRemoval`
-head-to-head in 14/25.
+**2. `FewestFailuresFirst` scheduling is free, and its benefit depends on
+working-pool headroom.** It costs nothing — no capacity loss, no depletion
+risk, no tuning — and orders servers by raw failure count, which stays
+accurate even when failures are misattributed. In the stress-tested regime
+(488 servers of headroom) it wins outright in the most cells of a 5×5 severity
+grid (12/25) and beats `ScoredRemoval` head-to-head in 14/25. At the paper
+defaults (48 servers of headroom) it showed **no measurable benefit** over
+`Random` in 20-replication paired comparisons: the CIs exclude any benefit
+larger than about 21 h (0.2%). With so little headroom, host selection has
+almost no room to steer around bad servers.
 
 **3. Active retirement (`ScoredRemoval`) only pays off in genuinely severe
 regimes.** It needs several conditions at once — failure-rate multiplier
@@ -62,7 +65,12 @@ retirement's benefit, with breakeven around 0.4–0.6. Misattribution
 innocent servers while the real offenders keep clean scores and are
 preferentially retained. `ThresholdRemoval` degrades the same way, for the
 same reason. `FewestFailuresFirst` is immune to this failure mode because it
-counts actual hardware failures rather than attributed blame.
+counts actual hardware failures rather than attributed blame — ground truth an
+operator may not have. Its operator-visible variant
+(`FewestAttributedFailuresFirst`) has only been tested at paper-default
+headroom, where it was indistinguishable from `Random`. At paper-default
+parameters the damage is small: uncertainty 0.2 raises training time about
+0.35% (95% CI +0.15% to +0.54%), rising to about 1.4–2.0% at 0.5.
 
 **8. Uptime-credit scoring provides no benefit at production scale.**
 Aggregate failure arrival across thousands of servers is too fast
@@ -76,16 +84,17 @@ threshold regardless of its credit parameters.
 
 | Situation | Deploy | Why |
 |---|---|---|
-| Default or unknown regime, diagnosis reliable | `FewestFailuresFirst` + `NeverRemove` | Zero-cost, zero-risk baseline that captures most of the available benefit |
+| Default or unknown regime, diagnosis reliable | `FewestFailuresFirst` + `NeverRemove` | Free and showed no measurable harm; its benefit needs headroom, so expect little at paper-default headroom (~48 servers) |
 | Failure multiplier ≳15× or repair-fail probability ≳60%, diagnosis reliable | `FewestFailuresFirst` + `ScoredRemoval` (2-failure threshold) | Best measured combination once severity justifies retirement's capacity cost |
 | Bad-server fraction known to be ≳5% | `ScoredRemoval`, regardless of other parameters | The one condition where retirement reliably pays off on its own |
 | `diagnosis_uncertainty` ≳0.2–0.4, or `diagnosis_probability` < 0.4 | `FewestFailuresFirst` + `NeverRemove`; avoid `ScoredRemoval` | Retirement relies on accurate blame attribution; under misdiagnosis it punishes the wrong servers |
-| Diagnosis quality unverified | `FewestFailuresFirst` alone | The only lever in this study that is provably safe regardless of diagnosis quality |
+| Diagnosis quality unverified | `FewestFailuresFirst` alone, if true failure counts are observable | The only lever here that does not depend on diagnosis; the attributed-count variant is untested where headroom is large |
 | Working-pool headroom is tight (≲100 servers above minimum) | `NeverRemove` or `ThresholdRemoval` only — never `ScoredRemoval` | Aggressive retirement risks depleting the pool below the job's minimum |
 | Considering `ThresholdRemoval` | Use `≥2/7d`, not `≥3/7d` | The conservative config retires too few servers to matter in any tested condition |
 
-**Bottom line:** deploy `FewestFailuresFirst` scheduling everywhere — it is
-strictly beneficial and free. Layer `ScoredRemoval` on top only when at
+**Bottom line:** deploy `FewestFailuresFirst` scheduling by default — it is
+free and its benefit grows with working-pool headroom, though at paper-default
+headroom it is indistinguishable from random selection. Layer `ScoredRemoval` on top only when at
 least one of (high failure severity, poor repair quality, a known
 substantial bad-server population) holds **and** diagnosis is trustworthy;
 otherwise the added retirement risk outweighs its benefit.
