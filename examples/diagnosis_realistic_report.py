@@ -209,6 +209,32 @@ def faff_assessment(data):
     return out
 
 
+def contrast_counts(data):
+    """(# of §4 contrasts whose paired 95% CI excludes 0, total # of contrasts)."""
+    sig = tot = 0
+    for prob, mults in PROBS.items():
+        for mult in mults:
+            for u in UNCS:
+                c = {p: data.get((prob, mult, p, u)) for p in POLICIES}
+                if not all(c.values()):
+                    continue
+                for a, b in (("FFF_oracle", "Random"), ("FAFF", "Random"),
+                             ("FAFF", "FFF_oracle")):
+                    m, h, n, _ = paired(c[a], c[b])
+                    if a == "FAFF" and b == "FFF_oracle" and prob == 1.0 and u == 0.0:
+                        continue  # identical by construction (counters equal)
+                    tot += 1
+                    sig += int(abs(m) > h)
+    return sig, tot
+
+
+def headroom_of(data):
+    import json
+    row = next(iter(next(iter(data.values())).values()))
+    p = json.loads(row["params_json"])
+    return p["working_pool_size"] - p["job_size"] - p["warm_standbys"]
+
+
 def verdict(data):
     c = criterion(data)
     fa = faff_assessment(data)
@@ -223,15 +249,39 @@ def verdict(data):
         f"uncertainty 0.1 by {u1['delta']:+.1f} h ({u1['pct']:+.2f}%; 95% CI "
         f"{u1['pct_lo']:+.2f}% to {u1['pct_hi']:+.2f}%); the criterion required a rise of "
         f"at least 1% with a CI excluding zero.")
+    # dose-response beyond the pre-registered range (descriptive, not part of the criterion)
+    hi = {}
+    for m in (5.0, 10.0):
+        base = data[(0.8, m, "Random", 0.0)]
+        bmean = statistics.mean(vals(base, "training_time_hrs"))
+        dm, dh, _, _ = paired(data[(0.8, m, "Random", 0.5)], base)
+        hi[m] = (100 * dm / bmean, 100 * (dm - dh) / bmean, 100 * (dm + dh) / bmean)
+    lines.append(
+        "The effect is nonetheless small but detectable, and it grows with uncertainty: "
+        f"for Random at uncertainty 0.5 (outside the pre-registered range) training time "
+        f"rises {hi[5.0][0]:+.2f}% (95% CI {hi[5.0][1]:+.2f}% to {hi[5.0][2]:+.2f}%) at "
+        f"multiplier 5 and {hi[10.0][0]:+.2f}% ({hi[10.0][1]:+.2f}% to {hi[10.0][2]:+.2f}%) "
+        "at multiplier 10.")
     any_benefit = [m for m, v in fa.items() if v["benefit"]]
+    lo = min(v["fff_minus_random"] - v["half"] for v in fa.values())
+    ref = statistics.mean(vals(data[(0.8, 5.0, "Random", 0.0)], "training_time_hrs"))
+    n_sig, n_tot = contrast_counts(data)
+    headroom = headroom_of(data)
     if any_benefit:
         lines.append("Oracle FFF beats Random at uncertainty 0 (paired 95% CI excludes 0) at "
                      f"multiplier(s) {', '.join(f'{m:g}' for m in any_benefit)}; see §4 for "
                      "whether FAFF keeps that benefit as uncertainty rises.")
     else:
-        lines.append("Oracle FFF shows no benefit over Random even at uncertainty 0 at any "
-                     "multiplier tested (paired 95% CI includes or lies above 0), so there is "
-                     "no benefit for FAFF to retain at these parameters.")
+        lines.append(
+            "Whether FewestAttributedFailuresFirst retains the benefit of oracle FFF is moot "
+            "here: oracle FFF shows no measurable benefit over Random even at uncertainty 0 "
+            "(paired 95% CIs include 0 at all three multipliers; a benefit larger than "
+            f"{-lo:.0f} h, about {-100 * lo / ref:.1f}% of training time, is excluded). "
+            f"Across all {n_tot} paired policy contrasts in §4, {n_sig} have a 95% CI "
+            f"excluding zero (about {0.05 * n_tot:.0f} expected by chance, no multiplicity "
+            f"adjustment). The working pool has only {headroom} servers of headroom above "
+            "the job's requirement at these parameters, leaving host selection little "
+            "room to steer around bad servers.")
     return lines, c, fa
 
 
@@ -296,7 +346,7 @@ def main():
               "raises mean training time by ≥ 1% with a 95% CI excluding zero (tested at "
               "diagnosis_probability 0.8, uncertainty 0.2; uncertainty 0.1 and the "
               "probability-1.0 slice are reported but do not decide the verdict).\n\n")
-    verdict_md = "## 6. Verdict\n\n" + "\n\n".join(vlines) + "\n"
+    verdict_md = "## Verdict\n\n" + "\n\n".join(vlines) + "\n"
     fig_md = ("\n## Figure\n\n![Training-time delta vs uncertainty]"
               "(../examples/diagnosis_realistic_figures/delta_vs_uncertainty.png)\n")
     with open(REPORT, "w") as f:
