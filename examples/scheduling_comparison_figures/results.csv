@@ -1,0 +1,10 @@
+scheduling,retirement,mean_time_hrs,stdev_time_hrs,mean_retired,stdev_retired,depleted_frac
+FewestFailures,NeverRemove,2122.47,45.20,0.0,0.0,0.00
+FewestFailures,ScoredRemoval,2065.91,30.41,336.3,17.9,0.00
+FewestFailures,ThresholdRemoval,2090.36,40.41,67.6,9.4,0.00
+HighestScore,NeverRemove,2122.47,45.20,0.0,0.0,0.00
+HighestScore,ScoredRemoval,2065.91,30.41,336.3,17.9,0.00
+HighestScore,ThresholdRemoval,2090.36,40.41,67.6,9.4,0.00
+Random,NeverRemove,2394.76,48.91,0.0,0.0,0.00
+Random,ScoredRemoval,2077.72,30.18,389.6,11.3,0.00
+Random,ThresholdRemoval,2319.12,53.57,106.2,10.6,0.00

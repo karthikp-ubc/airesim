@@ -1,0 +1,49 @@
+# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
+# started: 2026-09-21T15:18:20.509144
+# command: python3 examples/scheduling_comparison.py
+
+======================================================================
+Scheduling × Retirement policy comparison
+Regime: 20× multiplier | 75% manual repair fail | 4600-server pool
+Replications per cell: 15
+======================================================================
+  Scheduling       Retirement           Mean (hrs)     Std   Retired  Depleted
+  ----------------------------------------------------------------------------
+  Random           NeverRemove            2394.8h ± 48.9      0.0ret  
+  Random           ThresholdRemoval       2319.1h ± 53.6    106.2ret  
+  Random           ScoredRemoval          2077.7h ± 30.2    389.6ret  
+  FewestFailures   NeverRemove            2122.5h ± 45.2      0.0ret  
+  FewestFailures   ThresholdRemoval       2090.4h ± 40.4     67.6ret  
+  FewestFailures   ScoredRemoval          2065.9h ± 30.4    336.3ret  
+  HighestScore     NeverRemove            2122.5h ± 45.2      0.0ret  
+  HighestScore     ThresholdRemoval       2090.4h ± 40.4     67.6ret  
+  HighestScore     ScoredRemoval          2065.9h ± 30.4    336.3ret  
+
+Baseline (Random+NeverRemove): 2394.8 ± 48.9 hrs
+
+Δ vs baseline (negative = faster):
+  Random           + NeverRemove         +0.0h  (0 retired)
+  Random           + ThresholdRemoval    -75.6h  (106 retired)
+  Random           + ScoredRemoval       -317.0h  (390 retired)
+  FewestFailures   + NeverRemove         -272.3h  (0 retired)
+  FewestFailures   + ThresholdRemoval    -304.4h  (68 retired)
+  FewestFailures   + ScoredRemoval       -328.9h  (336 retired)
+  HighestScore     + NeverRemove         -272.3h  (0 retired)
+  HighestScore     + ThresholdRemoval    -304.4h  (68 retired)
+  HighestScore     + ScoredRemoval       -328.9h  (336 retired)
+
+Saving plots …
+  Saved → /home/karthik/Programs/airesim/examples/scheduling_comparison_figures/heatmap.png
+  Saved → /home/karthik/Programs/airesim/examples/scheduling_comparison_figures/bars_by_retirement.png
+  Saved → /home/karthik/Programs/airesim/examples/scheduling_comparison_figures/bars_by_scheduling.png
+  Saved → /home/karthik/Programs/airesim/examples/scheduling_comparison_figures/results.csv
+
+======================================================================
+Done. Output written to: /home/karthik/Programs/airesim/examples/scheduling_comparison_figures
+  bars_by_scheduling.png  (110 KB)
+  bars_by_retirement.png  (73 KB)
+  heatmap.png  (87 KB)
+  run.log  (2 KB)
+  results.csv  (0 KB)
+
+# finished: 2026-09-21T15:42:21.527874 exit=0
