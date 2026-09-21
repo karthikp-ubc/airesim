@@ -315,6 +315,7 @@ these names for backward compatibility.
 |-------|----------|
 | `DefaultHostSelection` | Uniform random selection |
 | `FewestFailuresFirst` | Sort ascending by `total_failure_count`; fewest-failures servers run first |
+| `FewestAttributedFailuresFirst` | Sort ascending by `attributed_failure_count` (failures diagnosis *blamed* on the server, not ground truth) |
 | `HighestScoreFirst` | Sort descending by `ScoredRemoval` score; highest-scored servers run first |
 | `PackedByRackFirst` | Group by `rack_id`; fill from the largest rack(s) first to minimize racks spanned |
 

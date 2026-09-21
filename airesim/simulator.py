@@ -282,11 +282,15 @@ class Simulator:
                             pool_mgr.return_to_working(failed_server)
                             repair_shop.notify_server_available()
                             failed_server = misdiagnosed
+                            stats.misattributed_repairs += 1
 
                     # Send the blamed server (real or misdiagnosed) to repair.
                     # remove_from_working is idempotent, so the misdiagnosis case
                     # (server already removed above) is safe.
                     pool_mgr.remove_from_working(failed_server)
+                    failed_server.attributed_failure_count += 1
+                    if not failed_server.is_bad:
+                        stats.nonfaulty_repairs += 1
                     self.removal_policy.on_failure(failed_server)
                     repair_shop.submit(failed_server)
 

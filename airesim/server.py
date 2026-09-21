@@ -58,6 +58,9 @@ class Server:
 
         # Bookkeeping
         self.total_failure_count = 0
+        # Failures the diagnosis step blamed on this server (may differ from the
+        # true count under misattribution or missed diagnosis).
+        self.attributed_failure_count = 0
         self.random_failure_count = 0
         self.systematic_failure_count = 0
         self.failure_timestamps: list[float] = []

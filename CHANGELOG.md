@@ -4,6 +4,29 @@ All notable changes to AIReSim are recorded here.
 
 ---
 
+## [Unreleased] — 2026-09-21
+
+### New Features
+
+#### `Server.attributed_failure_count` and `FewestAttributedFailuresFirst`
+
+**Affected files:** `airesim/server.py`, `airesim/simulator.py`, `airesim/stats.py`,
+`airesim/scheduling_policies.py`, `airesim/policies.py` (re-export),
+`tests/test_attributed_failures.py` (new)
+
+`total_failure_count` is incremented on the server that truly failed, so
+`FewestFailuresFirst` sees ground truth even when diagnosis blames the wrong
+server. `attributed_failure_count` is incremented only on the server diagnosis
+blames (nothing for undiagnosed failures), and `FewestAttributedFailuresFirst`
+sorts by it, giving a scheduler that uses only operator-visible information.
+The existing `FewestFailuresFirst` is unchanged. `StatsCollector` also gains
+`misattributed_repairs` (repair sent to a server that did not fail) and
+`nonfaulty_repairs` (repair submitted for a server with `is_bad == False`).
+None of this consumes RNG: seeds 42-71 on `config.yaml` still reproduce the
+`SIMULATION_REPORT.md` mean (9,832.325 h) exactly.
+
+---
+
 ## [Unreleased] — 2026-09-20
 
 ### Bug Fixes

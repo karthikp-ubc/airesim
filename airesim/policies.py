@@ -18,6 +18,7 @@ if TYPE_CHECKING:
 # Re-export scheduling policies so existing imports continue to work.
 from airesim.scheduling_policies import (  # noqa: F401
     DefaultHostSelection,
+    FewestAttributedFailuresFirst,
     FewestFailuresFirst,
     HighestScoreFirst,
     HostSelectionPolicy,

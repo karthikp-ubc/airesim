@@ -75,6 +75,30 @@ class FewestFailuresFirst(HostSelectionPolicy):
         return sorted_servers[:needed]
 
 
+class FewestAttributedFailuresFirst(HostSelectionPolicy):
+    """Prefer servers with the fewest failures *attributed* to them by diagnosis.
+
+    Unlike ``FewestFailuresFirst`` (which sees ground-truth ``total_failure_count``),
+    this policy only uses information an operator has: the count of failures the
+    diagnosis step blamed on each server.  Under misattribution the blamed server
+    is not always the one that failed, and undiagnosed failures are never counted.
+    """
+
+    def select(
+        self,
+        available_servers: list["Server"],
+        job_size: int,
+        warm_standbys: int,
+        rng: random.Random,
+    ) -> list["Server"]:
+        """Sort by ascending attributed failure count (random tiebreak); return the top."""
+        needed = job_size + warm_standbys
+        sorted_servers = sorted(
+            available_servers, key=lambda s: (s.attributed_failure_count, rng.random())
+        )
+        return sorted_servers[:needed]
+
+
 class PackedByRackFirst(HostSelectionPolicy):
     """Prefer packing the job into as few racks as possible (network locality).
 
