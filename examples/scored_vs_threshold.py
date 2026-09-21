@@ -35,6 +35,7 @@ Usage:
 
 from __future__ import annotations
 
+import csv
 import os
 import sys
 import statistics
@@ -332,6 +333,26 @@ def print_results_table(results: list[PolicyResult], baseline_time: float) -> No
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def save_csv(s1_results, sweeps) -> None:
+    """Write every policy/cell result (means, stdevs, retirements) to results.csv."""
+    path = fig_path("results.csv")
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["section", "x", "policy", "n_reps", "mean_time_hrs", "stdev_time_hrs",
+                    "mean_retired", "stdev_retired", "depleted_frac"])
+        for r in s1_results:
+            w.writerow(["head_to_head", "", r.name, N_REPS, repr(r.mean_time),
+                        repr(r.stdev_time), repr(r.mean_retired), repr(r.stdev_retired),
+                        r.depleted_frac])
+        for section, xs, by_policy in sweeps:
+            for name, results in by_policy.items():
+                for x, r in zip(xs, results):
+                    w.writerow([section, x, name, N_REPS, repr(r.mean_time),
+                                repr(r.stdev_time), repr(r.mean_retired),
+                                repr(r.stdev_retired), r.depleted_frac])
+    print(f"  Saved → {path}")
+
+
 def main():
     bad_ttf  = BAD_SERVER_TTF_DAYS
     good_ttf = GOOD_SERVER_TTF_DAYS
@@ -502,8 +523,10 @@ def main():
     # Plots
     # ═══════════════════════════════════════════════════════════════════════
     print()
-    print("Saving plots …")
+    print("Saving results and plots …")
 
+    save_csv(s1_results, [("multiplier", MULTIPLIERS, sweep2_results),
+                          ("manual_repair_fail_prob", REPAIR_FAIL_PROBS, sweep3_results)])
     plot_head_to_head(s1_results)
 
     # Build dict excluding NeverRemove for the line plots (it's the baseline)

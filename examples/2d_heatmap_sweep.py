@@ -32,6 +32,7 @@ Usage:
 
 from __future__ import annotations
 
+import csv
 import os
 import sys
 import statistics
@@ -441,6 +442,22 @@ def write_report(results: dict) -> None:
 
 # ── Entry point ───────────────────────────────────────────────────────────────
 
+def write_csv(results: dict) -> None:
+    """Write mean/stdev training time for every (policy, multiplier, repair_fail) cell."""
+    path = fig_path("results.csv")
+    with open(path, "w", newline="") as f:
+        w = csv.writer(f)
+        w.writerow(["policy", "multiplier", "manual_repair_fail_prob", "n_reps",
+                    "mean_time_hrs", "stdev_time_hrs"])
+        for pi, (label, _) in enumerate(POLICIES):
+            for mi, mult in enumerate(MULTIPLIERS):
+                for ri, rf in enumerate(REPAIR_FAIL_PROBS):
+                    w.writerow([label, mult, rf, N_REPS,
+                                repr(results["means"][pi][mi][ri]),
+                                repr(results["stdevs"][pi][mi][ri])])
+    print(f"  Saved → {path}")
+
+
 def main():
     print("AIReSim — 2-D Heatmap Sweep")
     print("=" * 65)
@@ -450,6 +467,7 @@ def main():
     print(f"Total runs: {len(MULTIPLIERS) * len(REPAIR_FAIL_PROBS) * len(POLICIES) * N_REPS}")
 
     results = run_sweep()
+    write_csv(results)
 
     means  = results["means"]
 
