@@ -486,6 +486,12 @@ stats = sim.run()
 `CompositeRemovalPolicy` fans out `on_failure`, `on_success`, and `reset` to both
 policies, but delegates `should_remove` to the primary (`retirement`) only.
 
+**Which policy should I actually deploy?** `docs/POLICY_SYNTHESIS_REPORT.md` distills
+empirical sweeps across failure severity, repair quality, bad-server fraction, and
+diagnosis quality into a short decision table — e.g. `ScoredRemoval` only pays off once
+failures are severe or bad servers are common *and* diagnosis is trustworthy; otherwise
+`FewestFailuresFirst` scheduling alone (§3) is the safer, zero-cost default.
+
 ---
 
 ## 5. Modelling Diagnosis Quality
@@ -733,6 +739,11 @@ for sched_label, retire_label, sched_f, retire_f in combos:
     etr  = statistics.mean(etrs)
     print(f"{sched_label:<14} {retire_label:<12}  {mean:>8.1f}h  {std:>5.1f}  {etr:>5.1%}")
 ```
+
+This is the same recipe used to produce `docs/RETIREMENT_POLICY_REPORT.md` and
+`docs/SCHEDULING_COMPARISON_REPORT.md` at larger scale and replication counts; see
+`docs/POLICY_SYNTHESIS_REPORT.md` for the resulting deployment recommendations rather
+than re-running the full sweep yourself.
 
 ---
 
