@@ -58,7 +58,7 @@ Both `pytest` and `ruff check` run automatically on every push and pull request 
 ## File Structure
 
 ```
-airesim/
+airesim/                    # source package
 ├── params.py               # Params dataclass — every simulation knob
 ├── server.py               # Server entity: state machine, failure history
 ├── coordinator.py          # Failure engine: samples next failure, drives job clock
@@ -66,10 +66,13 @@ airesim/
 ├── repairs.py              # Automated + manual repair pipeline (SimPy processes)
 ├── pool.py                 # Working pool / spare pool bookkeeping
 ├── scheduling_policies.py  # HostSelectionPolicy ABC + DefaultHostSelection,
-│                           #   FewestFailuresFirst, HighestScoreFirst
+│                           #   FewestFailuresFirst, FewestAttributedFailuresFirst,
+│                           #   PackedByRackFirst, HighestScoreFirst
 ├── policies.py             # RepairEscalationPolicy + ServerRemovalPolicy ABCs;
+│                           #   DefaultRepairEscalation, EscalateOnDetectedFailure;
 │                           #   NeverRemove, ThresholdRemoval, ScoredRemoval,
 │                           #   CompositeRemovalPolicy; re-exports scheduling_policies
+├── topology.py             # Optional rack_id assignment (Params.enable_topology)
 ├── simulator.py            # Top-level DES orchestrator — wires everything together
 ├── stats.py                # StatsCollector (per-run) and AggregateStats (multi-rep)
 ├── sweep.py                # OneWaySweep / TwoWaySweep parameter sweep drivers
@@ -78,36 +81,54 @@ airesim/
 ├── run.py                  # CLI entry point  (python -m airesim.run)
 └── __init__.py
 
-tests/
-├── test_airesim.py                 # Core simulation tests (23 cases)
-├── test_edge_cases.py              # Race-condition / bug-regression tests (5 cases)
-├── test_scored_removal.py          # ScoredRemoval unit + integration tests (24 cases)
-├── test_scheduling_policies.py     # HighestScoreFirst tests (9 cases)
-└── test_diagnosis_probability.py   # Diagnosis parameter tests (18 cases)
+tests/                       # 128 tests, 10 modules (per-file breakdown in the table above)
+├── test_airesim.py
+├── test_scored_removal.py
+├── test_diagnosis_probability.py
+├── test_scheduling_policies.py
+├── test_repair_escalation_policy.py
+├── test_topology.py
+├── test_prefix_equivalence.py
+├── test_attributed_failures.py
+├── test_edge_cases.py
+├── test_bad_server_repairs.py
+├── prefix_cases.py           # Shared case definitions for the golden-value equivalence check
+├── generate_prefix_golden.py # Regenerates tests/data/prefix_golden.json from a given commit
+└── data/prefix_golden.json   # Golden values: pre-8896140 simulator output, bit-for-bit
 
 examples/
-├── paper_table1_sweep.py       # Reproduce Table 1 from the paper
-├── retirement_payoff.py        # Regime analysis for retirement policies
-├── retirement_sweep.py         # ThresholdRemoval / ScoredRemoval sensitivity
-├── scored_vs_threshold.py      # Head-to-head comparison
-├── threshold_sensitivity.py    # Seven-parameter crossover analysis
+├── sweep_common.py             # Shared per-replication CSV logging (ReplicationLog, MonitoredSimulator)
+├── run_logged.py               # Runs a script from a clean tree with a provenance log (commit, date, command)
+├── paper_table1_sweep.py       # Two-way sweeps of Table 1's parameters × working-pool size
+├── generate_paper_figures.py   # Approximates Figure 2 (scaled-down cluster by default) + a sensitivity tornado
+├── simulation_report_stats.py  # Stats behind docs/SIMULATION_REPORT.md: adaptive replication on config.yaml
+├── job_length_sweep.py         # Systematic-vs-random failure counts across job lengths, at paper defaults
+├── diagnosis_sweep.py          # diagnosis_probability/diagnosis_uncertainty × scheduling/retirement, payoff regime
+├── diagnosis_realistic_sweep.py   # Does diagnosis_uncertainty matter at Table I defaults? (feeds the report below)
+├── diagnosis_realistic_report.py  # Builds docs/DIAGNOSIS_REALISTIC_REPORT.md from that sweep's results.csv
+├── scheduling_comparison.py    # 3×3 scheduling × retirement policy comparison, payoff regime
+├── 2d_heatmap_sweep.py         # Two-way sweep: failure multiplier × manual repair fail probability
+├── scored_vs_threshold.py      # ScoredRemoval vs ThresholdRemoval head-to-head, payoff regime
+├── threshold_sensitivity.py    # Seven-parameter ThresholdRemoval crossover analysis
+├── retirement_payoff.py        # Regime analysis: where does active retirement pay off?
+├── retirement_sweep.py         # Two-way sweep: auto_repair_fail_prob × retirement threshold
 ├── scored_sweep.py             # ScoredRemoval hyperparameter grid
-├── scheduling_comparison.py    # 3×3 scheduling × retirement policy experiment
-├── diagnosis_sweep.py          # Diagnosis probability/uncertainty parameter sweep
-├── stress_scenario.py          # High-load stress test
-└── generate_paper_figures.py   # All paper figures in one run
+└── stress_scenario.py          # Tight working pool, high failure rates, small spare pool
 
 docs/
-├── ARCHITECTURE.md             # This file's companion: module-by-module reference
+├── FINDINGS.md                 # Two-page summary for readers arriving from the DSN'26 paper
+├── ARCHITECTURE.md             # Module-by-module reference and design decisions
 ├── TUTORIAL.md                 # Step-by-step guide for new users
-├── SIMULATION_REPORT.md        # Full results report from config.yaml (with ETR)
-├── RETIREMENT_POLICY_REPORT.md # Retirement policy payoff analysis
+├── SIMULATION_REPORT.md        # Full results report from config.yaml (with ETR, job-length sweep)
+├── DIAGNOSIS_REALISTIC_REPORT.md    # Does diagnosis quality matter at Table I defaults?
+├── RETIREMENT_POLICY_REPORT.md      # ScoredRemoval vs ThresholdRemoval, payoff regime
+├── SCHEDULING_COMPARISON_REPORT.md  # Scheduling × retirement 3×3 experiment, payoff regime
+├── 2D-HEAT_MAP_REPORT.md       # Two-way heatmap sweep results, payoff regime
 ├── THRESHOLD_SENSITIVITY_REPORT.md  # ThresholdRemoval crossover analysis
-├── SCHEDULING_COMPARISON_REPORT.md  # Scheduling × retirement 3×3 experiment
-├── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality parameter sweep report
-└── 2D-HEAT_MAP_REPORT.md       # 2D heatmap sweep results
+├── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality × scheduling/retirement, payoff regime
+└── POLICY_SYNTHESIS_REPORT.md  # Synthesis of all reports above + deployment recommendations
 
-config.yaml                     # Ready-to-use params file (paper defaults + adaptive settings)
+config.yaml                     # Ready-to-use params file (Table I defaults + adaptive settings)
 ```
 
 ## Parameters
