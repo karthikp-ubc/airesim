@@ -1,0 +1,178 @@
+# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
+# started: 2026-09-21T15:18:20.461414
+# command: python3 examples/scored_vs_threshold.py
+
+AIReSim — ScoredRemoval vs ThresholdRemoval
+======================================================================
+  working_pool_size  : 4600  (headroom = 488)
+  bad servers        : 384 (8% of pool)
+  bad  server TTF    : 2.4 days
+  good server TTF    : 50 days
+  manual repair fail : 0.75 (effective fix rate ≈ 28%)
+  replications       : 15
+
+─── Section 1: Head-to-head comparison ───
+
+  NeverRemove            … time= 2394.8±48.9h  retired=  0.0±0.0
+  Thresh ≥5/7d           … time= 2394.8±48.9h  retired=  0.0±0.0
+  Thresh ≥3/7d           … time= 2388.2±47.4h  retired=  4.4±2.7
+  Thresh ≥2/7d           … time= 2319.1±53.6h  retired=106.2±10.6
+  Thresh ≥1/7d           … time= 1006.2±79.5h  retired=699.1±5.7  [depleted 100%]
+  SC_fast                … time= 2077.7±30.2h  retired=389.6±11.3
+  SC_moderate            … time= 2077.7±30.2h  retired=389.6±11.3
+  SC_long_period         … time= 2077.7±30.2h  retired=389.6±11.3
+  SC_calibrated          … time= 2232.3±55.6h  retired=187.7±8.8
+
+  Policy                  Time (hrs)            Δ vs Never    Retired         Dep.
+  ----------------------------------------------------------------------------
+  NeverRemove              2394.8 ± 48.9       +0.0h       0.0 ± 0.0         
+  Thresh ≥5/7d             2394.8 ± 48.9       +0.0h       0.0 ± 0.0         
+  Thresh ≥3/7d             2388.2 ± 47.4       -6.5h       4.4 ± 2.7         
+  Thresh ≥2/7d             2319.1 ± 53.6      -75.6h     106.2 ±10.6         
+  Thresh ≥1/7d             1006.2 ± 79.5    -1388.5h     699.1 ± 5.7   100%  
+  SC_fast                  2077.7 ± 30.2     -317.0h     389.6 ±11.3          ◀ best
+  SC_moderate              2077.7 ± 30.2     -317.0h     389.6 ±11.3          ◀ best
+  SC_long_period           2077.7 ± 30.2     -317.0h     389.6 ±11.3          ◀ best
+  SC_calibrated            2232.3 ± 55.6     -162.4h     187.7 ± 8.8         
+
+  Best ThresholdRemoval : Thresh ≥2/7d  (2319.1h, Δ=-75.6h, retired=106)
+  Best ScoredRemoval    : SC_fast  (2077.7h, Δ=-317.0h, retired=390)
+  Head-to-head winner   : ScoredRemoval  (Δ = 241.4h)
+
+─── Section 2: Benefit vs systematic_failure_rate_multiplier ───
+
+  multiplier = 5×
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=+7.6h  retired=0
+    Thresh ≥2/7d            Δ=-5.7h  retired=34
+    SC_fast                 Δ=-36.2h  retired=237
+    SC_moderate             Δ=-36.2h  retired=237
+    SC_long_period          Δ=-36.2h  retired=237
+    SC_calibrated           Δ=+1.3h  retired=45
+
+  multiplier = 10×
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=-13.1h  retired=2
+    Thresh ≥2/7d            Δ=-22.0h  retired=58
+    SC_fast                 Δ=-104.2h  retired=338
+    SC_moderate             Δ=-104.2h  retired=338
+    SC_long_period          Δ=-104.2h  retired=338
+    SC_calibrated           Δ=-46.8h  retired=106
+
+  multiplier = 15×
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=-4.6h  retired=3
+    Thresh ≥2/7d            Δ=-44.7h  retired=82
+    SC_fast                 Δ=-251.0h  retired=371
+    SC_moderate             Δ=-251.0h  retired=371
+    SC_long_period          Δ=-251.0h  retired=371
+    SC_calibrated           Δ=-97.0h  retired=161
+
+  multiplier = 20×
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=-6.5h  retired=4
+    Thresh ≥2/7d            Δ=-75.6h  retired=106
+    SC_fast                 Δ=-317.0h  retired=390
+    SC_moderate             Δ=-317.0h  retired=390
+    SC_long_period          Δ=-317.0h  retired=390
+    SC_calibrated           Δ=-162.4h  retired=188
+
+  multiplier = 25×
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=+3.2h  retired=7
+    Thresh ≥2/7d            Δ=-118.3h  retired=117
+    SC_fast                 Δ=-366.7h  retired=400
+    SC_moderate             Δ=-366.7h  retired=400
+    SC_long_period          Δ=-366.7h  retired=400
+    SC_calibrated           Δ=-212.3h  retired=198
+
+  multiplier = 30×
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=-14.2h  retired=9
+    Thresh ≥2/7d            Δ=-181.8h  retired=129
+    SC_fast                 Δ=-468.9h  retired=399
+    SC_moderate             Δ=-468.9h  retired=399
+    SC_long_period          Δ=-468.9h  retired=399
+    SC_calibrated           Δ=-277.4h  retired=209
+
+─── Section 3: Benefit vs manual_repair_fail_prob ───
+
+  manual_repair_fail_prob = 0.2  (fix rate ≈ 72%)
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=-1.2h  retired=1
+    Thresh ≥2/7d            Δ=-2.4h  retired=40
+    SC_fast                 Δ=-43.9h  retired=255
+    SC_moderate             Δ=-43.9h  retired=255
+    SC_long_period          Δ=-43.9h  retired=255
+    SC_calibrated           Δ=-7.2h  retired=47
+
+  manual_repair_fail_prob = 0.4  (fix rate ≈ 56%)
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=+3.2h  retired=2
+    Thresh ≥2/7d            Δ=-23.7h  retired=59
+    SC_fast                 Δ=-71.9h  retired=310
+    SC_moderate             Δ=-71.9h  retired=310
+    SC_long_period          Δ=-71.9h  retired=310
+    SC_calibrated           Δ=-22.4h  retired=84
+
+  manual_repair_fail_prob = 0.6  (fix rate ≈ 40%)
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=+4.0h  retired=3
+    Thresh ≥2/7d            Δ=-68.6h  retired=79
+    SC_fast                 Δ=-200.5h  retired=354
+    SC_moderate             Δ=-200.5h  retired=354
+    SC_long_period          Δ=-200.5h  retired=354
+    SC_calibrated           Δ=-67.6h  retired=139
+
+  manual_repair_fail_prob = 0.75  (fix rate ≈ 28%)
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=-6.5h  retired=4
+    Thresh ≥2/7d            Δ=-75.6h  retired=106
+    SC_fast                 Δ=-317.0h  retired=390
+    SC_moderate             Δ=-317.0h  retired=390
+    SC_long_period          Δ=-317.0h  retired=390
+    SC_calibrated           Δ=-162.4h  retired=188
+
+  manual_repair_fail_prob = 0.9  (fix rate ≈ 16%)
+    NeverRemove             Δ=+0.0h  retired=0
+    Thresh ≥3/7d            Δ=+4.5h  retired=7
+    Thresh ≥2/7d            Δ=-126.5h  retired=127
+    SC_fast                 Δ=-503.3h  retired=430
+    SC_moderate             Δ=-503.3h  retired=430
+    SC_long_period          Δ=-503.3h  retired=430
+    SC_calibrated           Δ=-271.8h  retired=246
+
+─── Analysis: ScoredRemoval vs ThresholdRemoval crossover ───
+
+  By multiplier (best Scored vs best Threshold, Δ from NeverRemove):
+    mult    best Thresh             Δ_T       best Scored             Δ_S       winner
+    ------------------------------------------------------------------------------
+    5×     Thresh ≥2/7d              -5.7h   SC_fast                  -36.2h   Scored ◀
+    10×     Thresh ≥2/7d             -22.0h   SC_fast                 -104.2h   Scored ◀
+    15×     Thresh ≥2/7d             -44.7h   SC_fast                 -251.0h   Scored ◀
+    20×     Thresh ≥2/7d             -75.6h   SC_fast                 -317.0h   Scored ◀
+    25×     Thresh ≥2/7d            -118.3h   SC_fast                 -366.7h   Scored ◀
+    30×     Thresh ≥2/7d            -181.8h   SC_fast                 -468.9h   Scored ◀
+
+  By repair-fail-prob (best Scored vs best Threshold, Δ from NeverRemove):
+    fail_p    best Thresh             Δ_T       best Scored             Δ_S       winner
+    --------------------------------------------------------------------------------
+    0.20      Thresh ≥2/7d              -2.4h   SC_fast                  -43.9h   Scored ◀
+    0.40      Thresh ≥2/7d             -23.7h   SC_fast                  -71.9h   Scored ◀
+    0.60      Thresh ≥2/7d             -68.6h   SC_fast                 -200.5h   Scored ◀
+    0.75      Thresh ≥2/7d             -75.6h   SC_fast                 -317.0h   Scored ◀
+    0.90      Thresh ≥2/7d            -126.5h   SC_fast                 -503.3h   Scored ◀
+
+Saving results and plots …
+  Saved → /home/karthik/Programs/airesim/examples/scored_vs_threshold_figures/results.csv
+  Saved → /home/karthik/Programs/airesim/examples/scored_vs_threshold_figures/head_to_head.png
+  Saved → /home/karthik/Programs/airesim/examples/scored_vs_threshold_figures/vs_multiplier.png
+  Saved → /home/karthik/Programs/airesim/examples/scored_vs_threshold_figures/vs_repair_fail_prob.png
+
+======================================================================
+Done. PNGs written to: /home/karthik/Programs/airesim/examples/scored_vs_threshold_figures
+  head_to_head.png  (116 KB)
+  vs_multiplier.png  (184 KB)
+  vs_repair_fail_prob.png  (174 KB)
+
+# finished: 2026-09-21T17:29:18.678181 exit=0
