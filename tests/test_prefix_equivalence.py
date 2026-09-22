@@ -29,16 +29,38 @@ with open(os.path.join(os.path.dirname(__file__), "data", "prefix_golden.json"))
     GOLDEN = json.load(_f)
 
 
+def _assert_matches_golden(actual: dict, golden: dict, msg: str) -> None:
+    """Compare a case's result dict against its golden value.
+
+    ``training_time_hours`` is compared with a relative tolerance rather than
+    exact string equality: it's a repr() of an accumulated float, and CPython
+    3.10/3.11 vs. 3.12 can round the last bit or two of that sum differently
+    (observed magnitude ~1e-13 relative) even when every discrete event in the
+    run -- and therefore every integer count below -- is bit-for-bit identical.
+    All other fields (failure/repair/retirement counts) must match exactly.
+    """
+    actual = dict(actual)
+    golden = dict(golden)
+    actual_time = float(actual.pop("training_time_hours"))
+    golden_time = float(golden.pop("training_time_hours"))
+    assert actual == golden, msg
+    assert actual_time == pytest.approx(golden_time, rel=1e-9), msg
+
+
 @pytest.mark.parametrize("name", list(prefix_cases.SMALL_CASES))
 def test_small_cases_match_prefix(name):
     for seed in prefix_cases.SMALL_SEEDS:
-        assert prefix_cases.run_small(name, seed) == GOLDEN["small"][name][str(seed)], (
-            f"case {name!r} seed {seed} diverged from the pre-fix simulator"
+        _assert_matches_golden(
+            prefix_cases.run_small(name, seed), GOLDEN["small"][name][str(seed)],
+            f"case {name!r} seed {seed} diverged from the pre-fix simulator",
         )
 
 
 def test_default_config_single_seed_matches_prefix():
-    assert prefix_cases.run_default(1.0, 42) == GOLDEN["default"]["1.0"]["42"]
+    _assert_matches_golden(
+        prefix_cases.run_default(1.0, 42), GOLDEN["default"]["1.0"]["42"],
+        "config.yaml prob=1.0 seed=42 diverged from the pre-fix simulator",
+    )
 
 
 def _default_job(args):
@@ -54,6 +76,7 @@ def test_default_config_all_sanity_seeds_match_prefix():
         results = pool.map(_default_job, jobs, chunksize=1)
     assert len(results) == 60
     for prob, seed, row in results:
-        assert row == GOLDEN["default"][str(prob)][str(seed)], (
+        _assert_matches_golden(
+            row, GOLDEN["default"][str(prob)][str(seed)],
             f"config.yaml prob={prob} seed={seed} diverged from the pre-fix simulator"
         )
