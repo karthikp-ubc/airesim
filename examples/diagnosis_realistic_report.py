@@ -105,7 +105,9 @@ def build(data, rows, sanity_rows):
     # ---- sanity ----
     w("## 2. Sanity check (`sanity.csv`)\n")
     w("Random + NeverRemove, `config.yaml` defaults, uncertainty 0, seeds 42-71 "
-      "(30 replications). `SIMULATION_REPORT.md` reports 9,832.32 h at probability 1.0.\n")
+      "(30 replications). `SIMULATION_REPORT.md` reports 9,872.90 h at probability 1.0, "
+      "and these rows are bit-identical to the golden values in "
+      "`tests/data/prefix_golden.json`.\n")
     w("| diagnosis_probability | n | mean (h) | 95% CI half-width (h) |")
     w("|---|---|---|---|")
     for pr in ("1.0", "0.8"):
@@ -181,8 +183,9 @@ def build(data, rows, sanity_rows):
 
     w("## 6. Accounting identity\n")
     w("In every run, training time equals job_length + total_failures × recovery_time "
-      "+ host_selection_count × host_selection_time (preemption waits and stalls are zero "
-      "in this sweep). AIReSim charges exactly one `recovery_time` per failure and no "
+      "+ host_selection_count × host_selection_time + preemption_count × "
+      "preemption_wait_time (there are no job stalls in this sweep). AIReSim charges "
+      "exactly one `recovery_time` per failure and no "
       "lost work since the last checkpoint. Any effect of diagnosis quality or policy on "
       "training time is therefore exactly its effect on the number of failures.\n")
     res = identity_residuals(rows)
@@ -194,8 +197,8 @@ def build(data, rows, sanity_rows):
         w(f"| {prob} | {mult:g} | {POLICY_LABEL[pol]} | {u} | {dT:+.1f} | {dF:+.1f} | "
           f"{pred:+.1f} |")
     w("")
-    w("The two columns differ only by the host-selection term (a few minutes per "
-      "selection).\n")
+    w("The two columns differ only by the host-selection and preemption-wait terms "
+      "(a few minutes each).\n")
 
     return out, corrs
 
@@ -222,18 +225,21 @@ def mechanism_rows(data):
                     dT, _, _, _ = paired(cell, base)
                     dF, _, _, _ = paired(cell, base, field="total_failures")
                     pred = dF * rec_min / 60.0
-                    out.append((prob, mult, pol, u, dT, dF, pred, dT / pred if pred else float("nan")))
+                    ratio = dT / pred if pred else float("nan")
+                    out.append((prob, mult, pol, u, dT, dF, pred, ratio))
     return out
 
 
 def identity_residuals(rows):
-    """|training_time - (job_length + failures*recovery + host_selections*hs_time)| in hours."""
+    """|training_time - (job_length + failures*recovery + host_selections*hs_time
+    + preemptions*preemption_wait)| in hours."""
     import json
     out = []
     for r in rows:
         p = json.loads(r["params_json"])
         pred = (p["job_length"] + float(r["total_failures"]) * p["recovery_time"]
-                + float(r["host_selection_count"]) * p["host_selection_time"]) / 60.0
+                + float(r["host_selection_count"]) * p["host_selection_time"]
+                + float(r["preemption_count"]) * p["preemption_wait_time"]) / 60.0
         out.append(abs(float(r["training_time_hrs"]) - pred))
     return out
 
@@ -333,7 +339,8 @@ def verdict(data, rows):
             "here: oracle FFF shows no measurable benefit over Random even at uncertainty 0 "
             "(paired 95% CIs include 0 at all three multipliers; a benefit larger than "
             f"{-lo:.0f} h, about {-100 * lo / ref:.1f}% of training time, is excluded). "
-            f"Across all {n_tot} paired policy contrasts in §4, {n_sig} have a 95% CI "
+            f"Across all {n_tot} paired policy contrasts in §4, {n_sig} "
+            f"{'has' if n_sig == 1 else 'have'} a 95% CI "
             f"excluding zero (about {0.05 * n_tot:.0f} expected by chance, no multiplicity "
             f"adjustment).")
         lines.append(
@@ -352,7 +359,8 @@ def verdict(data, rows):
     lines.append(
         "The misattribution cost is an accounting consequence of extra failures. In "
         "AIReSim, training time is exactly job_length + failures × recovery_time + "
-        "host selections × host_selection_time (largest residual over all runs "
+        "host selections × host_selection_time + preemptions × preemption_wait_time "
+        "(largest residual over all runs "
         f"{worst:.1e} h; §6). Misattribution leaves faulty servers unrepaired, they fail "
         "again, and each extra failure costs one recovery. The model charges no lost "
         "work since the last checkpoint, so a failure's cost does not depend on when it "

@@ -1,0 +1,67 @@
+# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
+# started: 2026-09-21T15:27:45.961595
+# command: python3 examples/diagnosis_realistic_sweep.py --workers 6
+
+0 rows already present, 1200 to run (commit 0cab8fbdf4, workers=6)
+  20/1200 rows  elapsed 3.4 min  ETA 200.5 min
+  40/1200 rows  elapsed 6.5 min  ETA 187.8 min
+  60/1200 rows  elapsed 9.7 min  ETA 184.9 min
+  80/1200 rows  elapsed 12.9 min  ETA 180.8 min
+  100/1200 rows  elapsed 15.8 min  ETA 174.3 min
+  120/1200 rows  elapsed 18.2 min  ETA 163.8 min
+  140/1200 rows  elapsed 20.4 min  ETA 154.5 min
+  160/1200 rows  elapsed 22.7 min  ETA 147.8 min
+  180/1200 rows  elapsed 25.2 min  ETA 143.0 min
+  200/1200 rows  elapsed 27.5 min  ETA 137.6 min
+  220/1200 rows  elapsed 29.8 min  ETA 132.7 min
+  240/1200 rows  elapsed 32.1 min  ETA 128.5 min
+  260/1200 rows  elapsed 34.5 min  ETA 124.9 min
+  280/1200 rows  elapsed 36.6 min  ETA 120.2 min
+  300/1200 rows  elapsed 38.7 min  ETA 116.2 min
+  320/1200 rows  elapsed 40.9 min  ETA 112.5 min
+  340/1200 rows  elapsed 43.2 min  ETA 109.4 min
+  360/1200 rows  elapsed 45.4 min  ETA 106.0 min
+  380/1200 rows  elapsed 47.5 min  ETA 102.6 min
+  400/1200 rows  elapsed 49.7 min  ETA 99.4 min
+  420/1200 rows  elapsed 51.5 min  ETA 95.6 min
+  440/1200 rows  elapsed 53.4 min  ETA 92.2 min
+  460/1200 rows  elapsed 55.4 min  ETA 89.1 min
+  480/1200 rows  elapsed 57.2 min  ETA 85.8 min
+  500/1200 rows  elapsed 59.2 min  ETA 82.8 min
+  520/1200 rows  elapsed 61.0 min  ETA 79.8 min
+  540/1200 rows  elapsed 62.9 min  ETA 76.9 min
+  560/1200 rows  elapsed 64.7 min  ETA 73.9 min
+  580/1200 rows  elapsed 66.7 min  ETA 71.3 min
+  600/1200 rows  elapsed 69.3 min  ETA 69.3 min
+  620/1200 rows  elapsed 72.1 min  ETA 67.5 min
+  640/1200 rows  elapsed 74.3 min  ETA 65.0 min
+  660/1200 rows  elapsed 76.3 min  ETA 62.4 min
+  680/1200 rows  elapsed 78.0 min  ETA 59.7 min
+  700/1200 rows  elapsed 79.9 min  ETA 57.1 min
+  720/1200 rows  elapsed 81.8 min  ETA 54.5 min
+  740/1200 rows  elapsed 83.5 min  ETA 51.9 min
+  760/1200 rows  elapsed 85.4 min  ETA 49.5 min
+  780/1200 rows  elapsed 87.3 min  ETA 47.0 min
+  800/1200 rows  elapsed 89.0 min  ETA 44.5 min
+  820/1200 rows  elapsed 90.8 min  ETA 42.1 min
+  840/1200 rows  elapsed 92.3 min  ETA 39.6 min
+  860/1200 rows  elapsed 93.9 min  ETA 37.1 min
+  880/1200 rows  elapsed 95.4 min  ETA 34.7 min
+  900/1200 rows  elapsed 96.9 min  ETA 32.3 min
+  920/1200 rows  elapsed 98.4 min  ETA 30.0 min
+  940/1200 rows  elapsed 99.9 min  ETA 27.6 min
+  960/1200 rows  elapsed 101.4 min  ETA 25.4 min
+  980/1200 rows  elapsed 102.8 min  ETA 23.1 min
+  1000/1200 rows  elapsed 104.3 min  ETA 20.9 min
+  1020/1200 rows  elapsed 105.8 min  ETA 18.7 min
+  1040/1200 rows  elapsed 107.2 min  ETA 16.5 min
+  1060/1200 rows  elapsed 108.7 min  ETA 14.4 min
+  1080/1200 rows  elapsed 110.1 min  ETA 12.2 min
+  1100/1200 rows  elapsed 111.5 min  ETA 10.1 min
+  1120/1200 rows  elapsed 112.9 min  ETA 8.1 min
+  1140/1200 rows  elapsed 114.4 min  ETA 6.0 min
+  1160/1200 rows  elapsed 115.9 min  ETA 4.0 min
+  1180/1200 rows  elapsed 117.4 min  ETA 2.0 min
+  1200/1200 rows  elapsed 118.8 min  ETA 0.0 min
+
+# finished: 2026-09-21T17:26:33.238230 exit=0
