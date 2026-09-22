@@ -82,6 +82,54 @@ revert entry above) exactly.
 
 ---
 
+### Correction
+
+#### The 2026-08-05 `DefaultHostSelection` fix (`2028107`) changed results by ≈8% in the payoff regime, not "<0.1%" everywhere
+
+**Affected files:** none (documentation-only correction; the code from `2028107` is
+unchanged and correct)
+
+**What changed, and why (recap of `2028107`, 2026-08-05):** `DefaultHostSelection.select()`
+took `available_servers[:needed]` and shuffled only that prefix, so servers beyond index
+`needed` in `available_servers` could never be chosen regardless of RNG seed. This was
+silent because a freshly-initialized pool's list order happens to line up with rack
+boundaries, and because nothing in the test suite asserted on which specific servers were
+selected — but `pool.py`'s `return_to_working` appends repaired servers to the *end* of
+`working_pool`, so as the pool churns, `DefaultHostSelection` increasingly favored
+early-list (i.e. not-recently-repaired) servers while documented and named as uniform
+random. The fix replaced the prefix-shuffle with `rng.sample(available_servers, needed)`,
+a true uniform sample of the full pool.
+
+**Why this correction:** the `2028107` CHANGELOG entry claimed the fix left "mean training
+time ... statistically unchanged (< 0.1% relative difference across 15 seeds, both under
+normal and high-churn conditions)". That check was run only in a low-churn regime. Re-run
+here at 15 seeds each, old prefix-shuffle vs current `rng.sample`, `NeverRemove`, same
+seeds paired:
+
+| Regime | Old (prefix-shuffle) | New (`rng.sample`) | Δ (new − old) |
+|---|---|---|---|
+| Paper defaults (`config.yaml`) | 9,861.7 ± 10.3 h | 9,874.4 ± 9.1 h | +12.7 h (+0.13%), SE 8.7 h — within noise, consistent with the original "<0.1%" claim |
+| Payoff regime (`examples/scheduling_comparison.py`'s `BASE`: 20× multiplier, 75% manual repair fail, 4,600-server pool) | 2,208.7 ± 9.3 h | 2,394.8 ± 12.6 h | **+186.1 h (+8.4%), SE 15.5 h — a real effect, not noise** |
+
+The payoff regime churns the pool much harder (more failures, more repairs returning
+servers to the end of `working_pool`), which is exactly the condition under which the old
+prefix bias was worst — so the "<0.1%" claim, true in the low-churn regime it was measured
+in, does not generalize. `FewestFailuresFirst`/`HighestScoreFirst`/`PackedByRackFirst`
+never call `rng.sample` (they sort deterministically), so they are bit-for-bit unaffected;
+only `DefaultHostSelection` ("Random" in the reports) changed.
+
+**Which reports predate the fix (their `Random`/`DefaultHostSelection` rows use the biased
+prefix-shuffle selection; everything else about them is unaffected):** the original
+`SIMULATION_REPORT.md` and `SCHEDULING_COMPARISON_REPORT.md` (2026-04-02),
+`RETIREMENT_POLICY_REPORT.md`, `2D-HEAT_MAP_REPORT.md`, `THRESHOLD_SENSITIVITY_REPORT.md`,
+and `DIAGNOSIS_SWEEP_REPORT.md`. All of these have since been regenerated (see the
+2026-09-21 entries above and the commits from `8d2f3d1` onward) under the current
+`rng.sample`-based selection, so the reports currently in `docs/` are not affected by this
+correction — it applies only to anyone comparing against a pre-2026-08-05 checkout or an
+archived copy of the original reports.
+
+---
+
 ## [Unreleased] — 2026-09-20
 
 ### Bug Fixes
