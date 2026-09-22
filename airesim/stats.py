@@ -27,6 +27,8 @@ class StatsCollector:
     servers_retired: int = 0
     misattributed_repairs: int = 0  # repairs sent to a server that did not actually fail
     nonfaulty_repairs: int = 0      # repairs submitted for a server with is_bad == False
+    bad_servers_cured: int = 0      # successful repairs of a server that was bad (bad -> good)
+    bad_server_repair_failures: int = 0  # failed repairs of a bad server (it stays bad)
 
     # Preemptions
     preemption_count: int = 0

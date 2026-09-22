@@ -115,7 +115,13 @@ class RepairShop:
             actual_success = auto_repair_succeeded
 
         # ── Post-repair decision ─────────────────────────────────────────
+        was_bad = server.is_bad
         server.complete_repair(success=actual_success)
+        if was_bad:
+            if actual_success:
+                self.stats.bad_servers_cured += 1
+            else:
+                self.stats.bad_server_repair_failures += 1
 
         if actual_success:
             self.stats.successful_repairs += 1
