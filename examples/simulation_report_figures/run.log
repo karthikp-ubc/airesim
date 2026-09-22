@@ -1,5 +1,5 @@
-# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
-# started: 2026-09-21T15:18:20.698313
+# commit: da28d045aeb687e2f7991924bb1c67e7501cd076
+# started: 2026-09-21T18:20:41.717037
 # command: python3 examples/simulation_report_stats.py
 
   rep    1: training_time=9881.05 hrs
@@ -40,4 +40,4 @@ AdaptiveRunner [CONVERGED]
   target accuracy   : ±5.0% of mean
 wrote /home/karthik/Programs/airesim/examples/simulation_report_figures/results.csv
 
-# finished: 2026-09-21T15:40:47.324099 exit=0
+# finished: 2026-09-21T18:25:23.460995 exit=0

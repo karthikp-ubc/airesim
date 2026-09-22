@@ -1,7 +1,10 @@
 # Two-Way Policy Sweep: Heat Map Results
 
 **Data:** `examples/2d_heatmap_figures/results.csv` (75 rows: 3 policies × 25 cells, 10
-replications each), produced by `examples/2d_heatmap_sweep.py` at commit `0cab8fb`
+replications each), produced by `examples/2d_heatmap_sweep.py` at commit `0cab8fb`;
+per-replication rows (seed, full params, host_selection_count, systematic/random
+failures, faulty servers in pool) re-logged at commit `da28d04` into
+`examples/2d_heatmap_figures/replications.csv`, same seeds, results unchanged
 (run log: `examples/2d_heatmap_figures/run.log`). Repairs follow the paper's model:
 `prob_auto_to_manual` is the probability that auto repair escalates, independent of the
 silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
@@ -13,11 +16,15 @@ silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
 > history. The `FewestFailuresFirst`/`HighestScoreFirst` results below therefore
 > measure the policy's effect at the host selections that happen when the job
 > exhausts its warm standbys. They do not measure health-aware replacement as an
-> operator would implement it. The number of full host selections per run was not
-> recorded for this sweep. At the paper defaults it is about 16 per run against
-> ~11,000 failures (`DIAGNOSIS_REALISTIC_REPORT.md`). `FewestFailuresFirst` here
-> also reads ground-truth failure counts (see `DIAGNOSIS_REALISTIC_REPORT.md` for
-> the attributed-count variant).
+> operator would implement it. This sweep now records host_selection_count per
+> replication (§2a): 5.6–8.1 per run for the `NeverRemove` policies and 15.4–31.3 for
+> `ScoredRemoval`, rising with both severity and repair-fail probability but always
+> small next to the hundreds-to-thousands of failures per run in this regime. At
+> **paper-semantics defaults** (not this sweep's regime) full host selection happens
+> about 41 times per run against ~11,000 failures (`SIMULATION_REPORT.md`; a similar
+> sweep with realistic diagnosis gets 37.7, `DIAGNOSIS_REALISTIC_REPORT.md`).
+> `FewestFailuresFirst` here also reads ground-truth failure counts (see
+> `DIAGNOSIS_REALISTIC_REPORT.md` for the attributed-count variant).
 
 ## Overview
 
@@ -48,6 +55,46 @@ All other parameters are held at the **payoff regime baseline**:
 10 replications per cell × 3 policies × 25 cells = **750 simulations total**. A typical
 cell mean has a standard error of about 12 h (stdevs 26–62 h). Cells marked † below have
 a difference from the baseline of less than two standard errors.
+
+## Overview: Host Selection Activity
+
+Mean full host-selection events per run, from `replications.csv` (10 replications/cell):
+
+**Random + NeverRemove**
+
+| mult↓ / repair_fail→ | 20% | 40% | 60% | 75% | 90% |
+|---|---|---|---|---|---|
+| **5×** | 5.6 | 5.7 | 5.8 | 5.9 | 5.9 |
+| **10×** | 5.9 | 5.7 | 5.8 | 6.6 | 6.1 |
+| **15×** | 6.6 | 6.5 | 6.6 | 6.4 | 7.5 |
+| **20×** | 5.9 | 6.4 | 7.6 | 7.4 | 7.5 |
+| **25×** | 6.3 | 6.7 | 7.5 | 7.4 | 8.1 |
+
+**Random + ScoredRemoval (SC_fast)**
+
+| mult↓ / repair_fail→ | 20% | 40% | 60% | 75% | 90% |
+|---|---|---|---|---|---|
+| **5×** | 15.4 | 16.8 | 18.0 | 18.9 | 20.8 |
+| **10×** | 18.3 | 20.5 | 22.9 | 24.8 | 26.1 |
+| **15×** | 20.0 | 22.0 | 25.1 | 26.2 | 29.2 |
+| **20×** | 19.8 | 23.4 | 26.0 | 27.8 | 30.6 |
+| **25×** | 20.8 | 24.1 | 27.2 | 29.0 | 31.3 |
+
+**FewestFailuresFirst + NeverRemove**
+
+| mult↓ / repair_fail→ | 20% | 40% | 60% | 75% | 90% |
+|---|---|---|---|---|---|
+| **5×** | 5.8 | 6.0 | 6.3 | 5.7 | 6.0 |
+| **10×** | 6.2 | 5.9 | 6.3 | 6.6 | 6.9 |
+| **15×** | 6.5 | 5.6 | 6.4 | 6.4 | 6.4 |
+| **20×** | 6.4 | 6.3 | 6.2 | 6.7 | 6.8 |
+| **25×** | 5.9 | 6.4 | 6.3 | 6.2 | 7.4 |
+
+`ScoredRemoval` raises host selections 2–5× over the baseline because every retirement
+forces a replacement; retirements grow with both severity and repair-fail probability
+(§ScoredRemoval below), which is why its host-selection grid tracks the same corner.
+`FewestFailuresFirst` (no retirement) tracks the `Random` baseline closely — the
+scheduling policy itself barely changes how often full host selection is needed.
 
 ---
 

@@ -21,10 +21,11 @@ _here = os.path.dirname(os.path.abspath(__file__))
 _root = os.path.dirname(_here)
 sys.path.insert(0, _root)
 
+from sweep_common import MonitoredSimulator  # noqa: E402
+
 import airesim.adaptive  # noqa: E402
 from airesim.adaptive import AdaptiveRunner  # noqa: E402
 from airesim.run import _load_params  # noqa: E402
-from sweep_common import MonitoredSimulator  # noqa: E402
 
 # Read-only monitor: same results as Simulator, adds faulty-server-in-pool samples.
 airesim.adaptive.Simulator = MonitoredSimulator

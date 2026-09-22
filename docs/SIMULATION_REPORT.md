@@ -4,10 +4,14 @@
 **Date:** 2026-09-21
 **Mode:** Adaptive replication — 95% CI, ±5% relative accuracy
 **Data:** `examples/simulation_report_figures/results.csv` (30 rows, one per replication,
-seeds 42–71), produced by `examples/simulation_report_stats.py` at commit `0cab8fb`
-(run log: `examples/simulation_report_figures/run.log`). Repairs follow the paper's
-model: `prob_auto_to_manual` is the probability that auto repair escalates, independent
-of the silent auto-repair failure `auto_repair_fail_prob`.
+seeds 42–71), produced by `examples/simulation_report_stats.py` at commit `0cab8fb`,
+re-run at commit `da28d04` with added bad-server/repair/pool columns (same seeds,
+headline numbers unchanged; run log: `examples/simulation_report_figures/run.log`).
+Repairs follow the paper's model: `prob_auto_to_manual` is the probability that auto
+repair escalates, independent of the silent auto-repair failure `auto_repair_fail_prob`.
+§5a's job-length sweep uses `examples/job_length_figures/replications.csv` (50 rows: 5 job
+lengths × 10 replications, seeds 42–51), produced by `examples/job_length_sweep.py` at
+commit `2255b8c` (run log: `examples/job_length_figures/run.log`).
 
 ---
 
@@ -140,6 +144,61 @@ on average — roughly twice per hour throughout the 9,873-hour run.
 
 ---
 
+## 5a. Job-Length Sensitivity: Systematic Failures Saturate
+
+With `bad_server_regeneration` off (the default), a server only ever moves from bad to
+good, on a successful repair; nothing ever makes a good server bad again. The pool starts
+with a fixed number of bad servers (≈622 of 4 600, ≈13.5%, `systematic_failure_fraction`
+× pool size minus retirements) and that population can only shrink. Systematic failures
+should therefore **saturate** as the bad population is cured — new systematic failures
+become rarer over the run even though the random-failure rate stays constant. The 256-day
+run above (§5.1) sits at that plateau: 684.7 systematic failures is the ceiling, not a
+steady-state rate.
+
+`examples/job_length_sweep.py` runs `config.yaml` (Random + NeverRemove) at five job
+lengths, 10 replications each, to trace the curve directly:
+
+| Job length (compute-days) | Wall-clock time (h) | Systematic failures | Random failures | Faulty servers left in pool | % of plateau reached |
+|---|---|---|---|---|---|
+| 15 | 677.2 ± 4.7 | 337.3 ± 6.7 | 600.3 ± 12.5 | 317.5 ± 10.3 | 49.4% |
+| 30 | 1,296.9 ± 5.7 | 501.0 ± 6.8 | 1,215.3 ± 15.5 | 164.1 ± 9.0 | 73.4% |
+| 60 | 2,468.0 ± 11.8 | 633.5 ± 11.1 | 2,435.4 ± 33.4 | 46.0 ± 4.7 | 92.8% |
+| 120 | 4,748.5 ± 12.4 | 679.8 ± 12.0 | 4,909.5 ± 37.3 | 3.2 ± 1.1 | 99.5% |
+| 256 | 9,876.8 ± 28.1 | 682.9 ± 11.6 | 10,496.2 ± 84.4 | 0.0 ± 0.0 | 100.0% |
+
+(± is the 95% CI half-width over 10 replications, t = 2.262. "% of plateau reached" is
+each row's systematic-failure count divided by the 256-day row's.) The 256-day systematic
+count (682.9 ± 11.6) matches the independent 30-replication, 256-day run in §5.1
+(684.7 ± 3.5 SE) within noise — both sit at the same ceiling.
+
+**Almost half of all systematic failures a run will ever see happen in the first 15
+compute-days (≈28 wall-clock days) of a 256-day job.** The bad-server population starts
+at ~622 and is down to 46 by 60 compute-days, 3 by 120, and fully cured by 256. Random
+failures, by contrast, grow roughly linearly with job length throughout (600 → 10,496,
+close to proportional to wall-clock time), because the random-failure rate never changes
+and the pool that generates them never shrinks. **Random failures dominate the failure
+count at every job length in this table, and increasingly so as systematic failures
+saturate** — random failures are 64% of the total at 15 days and 94% by 256 days.
+
+**This puts a hard upper bound on what any node-management policy can win at these
+parameters.** A policy cannot make a random failure not happen — by construction it is
+independent of any server's history. The best any retirement, scheduling-around-bad-servers,
+or diagnosis policy can do is prevent systematic failures entirely, which is worth at most
+
+```
+systematic_failures × recovery_time = 684.7 × 20 min ≈ 228.2 h ≈ 2.3% of the 9,873 h mean training time
+```
+
+Empirically, the policies actually tested at these defaults come nowhere near that
+ceiling — `POLICY_SYNTHESIS_REPORT.md` finding 3 found no measurable benefit from
+`FewestFailuresFirst` at the paper defaults (95% CI excludes any benefit above ~18 h,
+0.2%), consistent with a ≤2.3% ceiling that a policy acting on only ~41 of ~11,168
+failures per run (§7) is unlikely to approach. This bound does not apply to levers that
+act on every failure regardless of cause, such as `recovery_time` or the repair-fail
+probabilities (§10).
+
+---
+
 ## 6. Repair Pipeline
 
 All 11,168 failures per run enter the two-stage repair pipeline.
@@ -165,9 +224,25 @@ The **24% repair failure rate** follows from the two paths a repair can take.
 fails with probability `manual_repair_fail_prob = 0.20`; the other 20% are handled
 by auto repair alone, which silently fails with probability
 `auto_repair_fail_prob = 0.40`. The blended rate is
-0.80 × 0.20 + 0.20 × 0.40 = 24%, matching the measured 24.0%. These "silent-fail"
-repairs return servers to the pool that will fail again soon, amplifying the total
-failure count above what the raw failure rates alone would predict.
+0.80 × 0.20 + 0.20 × 0.40 = 24%, matching the measured 24.0%.
+
+That 24% applies uniformly to every repair, but every failure — bad-server or not —
+enters the same pipeline, and the outcome only *matters* for servers that were actually
+bad. Splitting the 11,168 repairs per run by whether the server was faulty (`is_bad`)
+going in:
+
+| Repair population | Repairs/run | Share | Silent-fail rate | Effect of a silent failure |
+|---|---|---|---|---|
+| Bad server (`is_bad=True`) | 817.4 | 7.3% | 23.6% (192.5 stay bad) | Server stays bad, fails systematically again — this is the leak |
+| Good server (`is_bad=False`) | 10,351.0 | 92.7% | ~24.0% (measured) | **None** — the server was never bad, so it stays good whether the repair is recorded as a "success" or a "failure" |
+
+92.7% of repairs are on servers that were not faulty to begin with (a random,
+non-systematic failure is not evidence the server itself is bad), so a "failed" repair
+there changes nothing observable. Only the 7.3% of repairs on genuinely bad servers can
+amplify the failure count, and even there roughly 3 in 4 succeed and cure the server
+(§5a). The measured 24.0% blended rate is the same silent-fail probability for both
+populations — it is not that bad servers fail repair more often, only that a failure
+there is consequential and a failure on a good server is bookkeeping noise.
 
 ---
 
@@ -223,10 +298,17 @@ within-run randomness averages out, leaving very little run-to-run variance.
    all slowdown. Halving recovery time would reduce total training time by
    ~1,861 hrs (~19%).
 
-3. **The repair pipeline is leaky.** A 24% net repair failure rate means the
-   cluster is continuously re-encountering servers that were declared healthy
-   but are not. Reducing `auto_repair_fail_prob` or `manual_repair_fail_prob`
-   would reduce repeat failures and therefore total recovery time.
+3. **The repair pipeline's "leak" only matters for the 7.3% of repairs on
+   genuinely bad servers.** The measured 24% repair failure rate is the same
+   silent-fail probability whether or not the server was actually faulty
+   going in, but a failure only has a consequence for the servers that were
+   (§6): they stay bad and fail systematically again. The other 92.7% of
+   repairs (10,351/run) are on servers that were never bad, where a "failed"
+   repair changes nothing observable. Reducing `auto_repair_fail_prob` or
+   `manual_repair_fail_prob` therefore only reduces the systematic-failure
+   count, not the dominant random-failure count, and its benefit is bounded
+   by the same ≤2.3% ceiling as any other node-management lever at these
+   defaults (§5a).
 
 4. **Warm standbys work as designed.** With only 41 host-selection events
    across 11,168 failures, the 16-server warm-standby reserve absorbs
@@ -240,11 +322,22 @@ within-run randomness averages out, leaving very little run-to-run variance.
    all 30 replications confirm the configuration has sufficient resilience for
    the modelled failure rates and repair durations.
 
-7. **Systematic failures are a minor contributor.** Despite failing 5× faster,
-   bad servers (15% of the pool) generate only 6.1% of total failures because
-   of their relatively small population share. Increasing
-   `systematic_failure_fraction` or `systematic_failure_rate_multiplier` would
-   shift this balance.
+7. **Systematic failures saturate; the 6.1% share (§5.1) is a long-run
+   average, not a stable rate.** With `bad_server_regeneration` off, a
+   successful repair cures a bad server and nothing turns a good server bad,
+   so the systematic-failure count is capped by the initial bad population
+   (~622 of 4,600 servers) and plateaus at 684.7 ± 19.3 over a 256-day run —
+   **49.4% of that ceiling is reached in the first 15 compute-days** (§5a).
+   Random failures have no such ceiling and grow roughly linearly with job
+   length (600 at 15 days → 10,496 at 256 days), so systematic failures'
+   share of the total falls from 36% at 15 days to 6.1% at 256 days as the
+   bad population is cured out from under them. Any policy that targets bad
+   servers exclusively — retirement, health-aware scheduling, faster or more
+   reliable repair — is capped at eliminating 684.7 systematic failures ×
+   `recovery_time` ≈ **228 h ≈ 2.3% of training time** at these parameters
+   (§5a); increasing `systematic_failure_fraction` or
+   `systematic_failure_rate_multiplier` would raise both the ceiling and the
+   plateau.
 
 ---
 
@@ -253,9 +346,9 @@ within-run randomness averages out, leaving very little run-to-run variance.
 | Action | Expected effect on ETR |
 |--------|----------------------|
 | Reduce `recovery_time` from 20 → 10 min | ETR: ~62.2% → ~76.7% (+14.5 pp); saves ~1,861 hrs |
-| Reduce `auto_repair_fail_prob` from 0.40 → 0.20 | Only the 20% of repairs that stay in auto repair are affected: blended failure rate 24% → 20%, so a modest reduction in repeat failures |
-| Reduce `manual_repair_fail_prob` from 0.20 → 0.10 | Affects the 80% of repairs handled manually: blended failure rate 24% → 16%, a larger reduction in repeat failures |
-| Reduce `prob_auto_to_manual` from 0.80 → 0.40 | Fewer 2-day manual repairs (fewer servers in repair at once), but more repairs rely on the leakier auto stage: blended failure rate rises 24% → 32% |
+| Reduce `auto_repair_fail_prob` from 0.40 → 0.20 | Blended failure rate 24% → 20%, but the change only has a consequence for the 7.3% of repairs on genuinely bad servers (§6); benefit capped by the ≤2.3% systematic-failure ceiling (§5a), not the 24%→20% headline drop |
+| Reduce `manual_repair_fail_prob` from 0.20 → 0.10 | Blended failure rate 24% → 16%, same caveat: only the 7.3% bad-server repair share is affected, so the realized benefit is well under the ≤2.3% ceiling (§5a) |
+| Reduce `prob_auto_to_manual` from 0.80 → 0.40 | Blended failure rate rises 24% → 32%, but again only for the 7.3% bad-server share — the random-failure majority (§5a) is untouched either way |
 | Increase `warm_standbys` from 16 → 32 | Maintain near-zero host-selection overhead under higher failure rates |
 | Enable `bad_server_regeneration` | Models hardware aging; expected to gradually reduce ETR over time |
 

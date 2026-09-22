@@ -1,5 +1,5 @@
-# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
-# started: 2026-09-21T15:18:20.549534
+# commit: da28d045aeb687e2f7991924bb1c67e7501cd076
+# started: 2026-09-21T17:59:44.364357
 # command: python3 examples/2d_heatmap_sweep.py
 
 AIReSim — 2-D Heatmap Sweep
@@ -16,104 +16,104 @@ Running 25 cells × 3 policies × 10 reps = 750 simulation runs total.
     Random+NeverRemove                        1760.3 ±  26.0 hrs
     Random+ScoredRemoval(SC_fast)             1746.0 ±  32.2 hrs
     FewestFailuresFirst+NeverRemove           1750.9 ±  24.5 hrs
-  Cell  2/25  mult= 5×  repair_fail=0.40  [156s elapsed]
+  Cell  2/25  mult= 5×  repair_fail=0.40  [55s elapsed]
     Random+NeverRemove                        1783.8 ±  43.0 hrs
     Random+ScoredRemoval(SC_fast)             1800.6 ±  30.8 hrs
     FewestFailuresFirst+NeverRemove           1749.3 ±  45.6 hrs
-  Cell  3/25  mult= 5×  repair_fail=0.60  [312s elapsed]
+  Cell  3/25  mult= 5×  repair_fail=0.60  [99s elapsed]
     Random+NeverRemove                        1833.2 ±  37.7 hrs
     Random+ScoredRemoval(SC_fast)             1811.0 ±  30.6 hrs
     FewestFailuresFirst+NeverRemove           1774.8 ±  20.7 hrs
-  Cell  4/25  mult= 5×  repair_fail=0.75  [475s elapsed]
+  Cell  4/25  mult= 5×  repair_fail=0.75  [144s elapsed]
     Random+NeverRemove                        1849.4 ±  42.0 hrs
     Random+ScoredRemoval(SC_fast)             1818.5 ±  36.4 hrs
     FewestFailuresFirst+NeverRemove           1808.0 ±  22.4 hrs
-  Cell  5/25  mult= 5×  repair_fail=0.90  [644s elapsed]
+  Cell  5/25  mult= 5×  repair_fail=0.90  [188s elapsed]
     Random+NeverRemove                        1883.3 ±  41.2 hrs
     Random+ScoredRemoval(SC_fast)             1858.2 ±  39.0 hrs
     FewestFailuresFirst+NeverRemove           1819.5 ±  53.0 hrs
-  Cell  6/25  mult=10×  repair_fail=0.20  [874s elapsed]
+  Cell  6/25  mult=10×  repair_fail=0.20  [235s elapsed]
     Random+NeverRemove                        1885.6 ±  28.0 hrs
     Random+ScoredRemoval(SC_fast)             1870.4 ±  46.1 hrs
     FewestFailuresFirst+NeverRemove           1854.0 ±  21.6 hrs
-  Cell  7/25  mult=10×  repair_fail=0.40  [1127s elapsed]
+  Cell  7/25  mult=10×  repair_fail=0.40  [282s elapsed]
     Random+NeverRemove                        1937.7 ±  40.9 hrs
     Random+ScoredRemoval(SC_fast)             1921.8 ±  30.6 hrs
     FewestFailuresFirst+NeverRemove           1874.7 ±  31.2 hrs
-  Cell  8/25  mult=10×  repair_fail=0.60  [1390s elapsed]
+  Cell  8/25  mult=10×  repair_fail=0.60  [329s elapsed]
     Random+NeverRemove                        2007.2 ±  36.0 hrs
     Random+ScoredRemoval(SC_fast)             1942.3 ±  33.8 hrs
     FewestFailuresFirst+NeverRemove           1913.5 ±  32.8 hrs
-  Cell  9/25  mult=10×  repair_fail=0.75  [1608s elapsed]
+  Cell  9/25  mult=10×  repair_fail=0.75  [379s elapsed]
     Random+NeverRemove                        2097.8 ±  40.7 hrs
     Random+ScoredRemoval(SC_fast)             1991.1 ±  41.8 hrs
     FewestFailuresFirst+NeverRemove           1964.4 ±  33.2 hrs
-  Cell 10/25  mult=10×  repair_fail=0.90  [1804s elapsed]
+  Cell 10/25  mult=10×  repair_fail=0.90  [430s elapsed]
     Random+NeverRemove                        2198.3 ±  39.3 hrs
     Random+ScoredRemoval(SC_fast)             2012.5 ±  24.5 hrs
     FewestFailuresFirst+NeverRemove           1999.7 ±  62.9 hrs
-  Cell 11/25  mult=15×  repair_fail=0.20  [2002s elapsed]
+  Cell 11/25  mult=15×  repair_fail=0.20  [481s elapsed]
     Random+NeverRemove                        1921.1 ±  29.3 hrs
     Random+ScoredRemoval(SC_fast)             1911.4 ±  38.8 hrs
     FewestFailuresFirst+NeverRemove           1888.0 ±  42.5 hrs
-  Cell 12/25  mult=15×  repair_fail=0.40  [2187s elapsed]
+  Cell 12/25  mult=15×  repair_fail=0.40  [528s elapsed]
     Random+NeverRemove                        2027.9 ±  40.3 hrs
     Random+ScoredRemoval(SC_fast)             1955.3 ±  23.0 hrs
     FewestFailuresFirst+NeverRemove           1948.3 ±  43.3 hrs
-  Cell 13/25  mult=15×  repair_fail=0.60  [2367s elapsed]
+  Cell 13/25  mult=15×  repair_fail=0.60  [575s elapsed]
     Random+NeverRemove                        2138.1 ±  31.6 hrs
     Random+ScoredRemoval(SC_fast)             2021.3 ±  35.5 hrs
     FewestFailuresFirst+NeverRemove           2017.9 ±  47.2 hrs
-  Cell 14/25  mult=15×  repair_fail=0.75  [2570s elapsed]
+  Cell 14/25  mult=15×  repair_fail=0.75  [626s elapsed]
     Random+NeverRemove                        2275.7 ±  61.6 hrs
     Random+ScoredRemoval(SC_fast)             2029.4 ±  23.2 hrs
     FewestFailuresFirst+NeverRemove           2052.0 ±  50.8 hrs
-  Cell 15/25  mult=15×  repair_fail=0.90  [2770s elapsed]
+  Cell 15/25  mult=15×  repair_fail=0.90  [678s elapsed]
     Random+NeverRemove                        2399.9 ±  55.0 hrs
     Random+ScoredRemoval(SC_fast)             2094.3 ±  46.0 hrs
     FewestFailuresFirst+NeverRemove           2121.3 ±  51.5 hrs
-  Cell 16/25  mult=20×  repair_fail=0.20  [2970s elapsed]
+  Cell 16/25  mult=20×  repair_fail=0.20  [732s elapsed]
     Random+NeverRemove                        1937.4 ±  36.9 hrs
     Random+ScoredRemoval(SC_fast)             1903.1 ±  20.6 hrs
     FewestFailuresFirst+NeverRemove           1928.1 ±  37.5 hrs
-  Cell 17/25  mult=20×  repair_fail=0.40  [3132s elapsed]
+  Cell 17/25  mult=20×  repair_fail=0.40  [778s elapsed]
     Random+NeverRemove                        2059.8 ±  60.5 hrs
     Random+ScoredRemoval(SC_fast)             1986.6 ±  33.2 hrs
     FewestFailuresFirst+NeverRemove           1986.9 ±  56.4 hrs
-  Cell 18/25  mult=20×  repair_fail=0.60  [3310s elapsed]
+  Cell 18/25  mult=20×  repair_fail=0.60  [828s elapsed]
     Random+NeverRemove                        2220.4 ±  51.7 hrs
     Random+ScoredRemoval(SC_fast)             2032.8 ±  27.8 hrs
     FewestFailuresFirst+NeverRemove           2056.9 ±  60.4 hrs
-  Cell 19/25  mult=20×  repair_fail=0.75  [3449s elapsed]
+  Cell 19/25  mult=20×  repair_fail=0.75  [880s elapsed]
     Random+NeverRemove                        2389.5 ±  36.9 hrs
     Random+ScoredRemoval(SC_fast)             2080.6 ±  34.5 hrs
     FewestFailuresFirst+NeverRemove           2123.0 ±  51.7 hrs
-  Cell 20/25  mult=20×  repair_fail=0.90  [3642s elapsed]
+  Cell 20/25  mult=20×  repair_fail=0.90  [934s elapsed]
     Random+NeverRemove                        2605.5 ±  33.5 hrs
     Random+ScoredRemoval(SC_fast)             2116.8 ±  42.4 hrs
     FewestFailuresFirst+NeverRemove           2209.8 ±  58.3 hrs
-  Cell 21/25  mult=25×  repair_fail=0.20  [3774s elapsed]
+  Cell 21/25  mult=25×  repair_fail=0.20  [992s elapsed]
     Random+NeverRemove                        1956.1 ±  42.7 hrs
     Random+ScoredRemoval(SC_fast)             1938.8 ±  20.2 hrs
     FewestFailuresFirst+NeverRemove           1920.8 ±  43.2 hrs
-  Cell 22/25  mult=25×  repair_fail=0.40  [3953s elapsed]
+  Cell 22/25  mult=25×  repair_fail=0.40  [1038s elapsed]
     Random+NeverRemove                        2082.4 ±  31.7 hrs
     Random+ScoredRemoval(SC_fast)             2000.8 ±  38.4 hrs
     FewestFailuresFirst+NeverRemove           2011.1 ±  39.6 hrs
-  Cell 23/25  mult=25×  repair_fail=0.60  [4146s elapsed]
+  Cell 23/25  mult=25×  repair_fail=0.60  [1087s elapsed]
     Random+NeverRemove                        2278.3 ±  29.1 hrs
     Random+ScoredRemoval(SC_fast)             2067.2 ±  35.5 hrs
     FewestFailuresFirst+NeverRemove           2094.3 ±  45.2 hrs
-  Cell 24/25  mult=25×  repair_fail=0.75  [4319s elapsed]
+  Cell 24/25  mult=25×  repair_fail=0.75  [1140s elapsed]
     Random+NeverRemove                        2481.3 ±  54.3 hrs
     Random+ScoredRemoval(SC_fast)             2102.8 ±  30.6 hrs
     FewestFailuresFirst+NeverRemove           2191.4 ±  70.8 hrs
-  Cell 25/25  mult=25×  repair_fail=0.90  [4526s elapsed]
+  Cell 25/25  mult=25×  repair_fail=0.90  [1196s elapsed]
     Random+NeverRemove                        2806.5 ±  60.7 hrs
     Random+ScoredRemoval(SC_fast)             2135.5 ±  44.6 hrs
     FewestFailuresFirst+NeverRemove           2270.5 ±  44.3 hrs
 
-Sweep complete in 4804s (80.1 min).
+Sweep complete in 1256s (20.9 min).
 
   Saved → /home/karthik/Programs/airesim/examples/2d_heatmap_figures/results.csv
 
@@ -131,7 +131,8 @@ Done. Outputs written to: /home/karthik/Programs/airesim/examples/2d_heatmap_fig
   heatmap_report.md  (3 KB)
   heatmap_scored_delta.png  (101 KB)
   heatmap_winner.png  (65 KB)
+  replications.csv  (919 KB)
   results.csv  (5 KB)
   run.log  (7 KB)
 
-# finished: 2026-09-21T16:38:28.764884 exit=0
+# finished: 2026-09-21T18:20:41.682508 exit=0

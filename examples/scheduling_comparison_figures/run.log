@@ -1,5 +1,5 @@
-# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
-# started: 2026-09-21T15:18:20.509144
+# commit: da28d045aeb687e2f7991924bb1c67e7501cd076
+# started: 2026-09-21T17:49:59.548392
 # command: python3 examples/scheduling_comparison.py
 
 ======================================================================
@@ -40,10 +40,11 @@ Saving plots …
 
 ======================================================================
 Done. Output written to: /home/karthik/Programs/airesim/examples/scheduling_comparison_figures
+  replications.csv  (168 KB)
   bars_by_scheduling.png  (110 KB)
   bars_by_retirement.png  (73 KB)
   heatmap.png  (87 KB)
   run.log  (2 KB)
   results.csv  (0 KB)
 
-# finished: 2026-09-21T15:42:21.527874 exit=0
+# finished: 2026-09-21T17:59:44.319301 exit=0

@@ -2,7 +2,10 @@
 ## Does Smarter Scheduling Help — or Hurt?
 
 **Data:** `examples/scheduling_comparison_figures/results.csv` (9 cells × 15 replications),
-produced by `examples/scheduling_comparison.py` at commit `0cab8fb`
+produced by `examples/scheduling_comparison.py` at commit `0cab8fb`; per-replication rows
+(seed, full params, host_selection_count, systematic/random failures, faulty servers in
+pool) re-logged at commit `da28d04` into
+`examples/scheduling_comparison_figures/replications.csv`, same seeds, results unchanged
 (run log: `examples/scheduling_comparison_figures/run.log`). Repairs follow the paper's
 model: `prob_auto_to_manual` is the probability that auto repair escalates, independent
 of the silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
@@ -16,11 +19,15 @@ of the silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
 > history. The `FewestFailuresFirst`/`HighestScoreFirst` results below therefore
 > measure the policy's effect at the host selections that happen when the job
 > exhausts its warm standbys. They do not measure health-aware replacement as an
-> operator would implement it. The number of full host selections per run was not
-> recorded for this sweep. At the paper defaults it is about 16 per run against
-> ~11,000 failures (`DIAGNOSIS_REALISTIC_REPORT.md`). `FewestFailuresFirst` here
-> also reads ground-truth failure counts (see `DIAGNOSIS_REALISTIC_REPORT.md` for
-> the attributed-count variant).
+> operator would implement it. This sweep now records host_selection_count per
+> replication (§below): 6.7–7.3 per run for `NeverRemove` policies and 24.9–27.7 for
+> `ScoredRemoval` in this (elevated-failure, 14-day) regime — still small next to the
+> ~1,450–2,800 failures per run here. At **paper-semantics defaults** (not this
+> sweep's regime) full host selection happens about 41 times per run against
+> ~11,000 failures (`SIMULATION_REPORT.md`; a similar sweep with realistic diagnosis
+> gets 37.7, `DIAGNOSIS_REALISTIC_REPORT.md`). `FewestFailuresFirst` here also reads
+> ground-truth failure counts (see `DIAGNOSIS_REALISTIC_REPORT.md` for the
+> attributed-count variant).
 
 ## 1. Executive Summary
 
@@ -96,6 +103,33 @@ ETR = 336 / mean_training_time. Higher ETR = more productive compute per wall-cl
 | HighestScore | ScoredRemoval | 2065.9 | 16.3% | ±30.4 | −328.9h | 336 |
 
 Per-cell standard errors are ≈8–14h (stdev ÷ √15). No cell was depleted.
+
+---
+
+## 3a. Host Selection Activity
+
+Mean full host-selection events per run, from `replications.csv` (15 replications/cell):
+
+| Scheduling | Retirement | Mean host selections |
+|---|---|---|
+| Random | NeverRemove | 7.3 |
+| Random | Thresh ≥2/7d | 13.1 |
+| Random | ScoredRemoval | 27.7 |
+| FewestFailures | NeverRemove | 6.7 |
+| FewestFailures | Thresh ≥2/7d | 11.1 |
+| FewestFailures | ScoredRemoval | 24.9 |
+| HighestScore | NeverRemove | 6.7 |
+| HighestScore | Thresh ≥2/7d | 11.1 |
+| HighestScore | ScoredRemoval | 24.9 |
+
+Retirement drives most of the host-selection activity here (7 → 28 as retirement gets
+more aggressive), not the scheduling policy — `FewestFailuresFirst`/`HighestScoreFirst`
+act at slightly *fewer* host selections than `Random` because they route jobs away from
+recently-failed servers, which are also the ones most likely to fail again and trigger
+the next selection. In every column, host selections (7–28) remain far below the
+~1,450–2,800 failures per run this regime produces (§5.1-equivalent counts in the raw
+data), so §6–9's findings for `FewestFailuresFirst`/`HighestScoreFirst` describe the
+policy's effect at a small fraction of all replacement events, per the design caveat above.
 
 ---
 
