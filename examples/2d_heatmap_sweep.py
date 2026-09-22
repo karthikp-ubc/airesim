@@ -40,14 +40,16 @@ import time
 
 _here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_here))
+sys.path.insert(0, _here)
 
 from airesim.params import Params
-from airesim.simulator import Simulator
+import sweep_common
 from airesim.policies import NeverRemove, ScoredRemoval
 from airesim.scheduling_policies import DefaultHostSelection, FewestFailuresFirst
 
 # ── Output directory ──────────────────────────────────────────────────────────
 
+LOG = None  # ReplicationLog, created in main()
 FIGURES_DIR = os.path.join(_here, "2d_heatmap_figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
@@ -119,12 +121,12 @@ POLICY_SHORT = ["Baseline", "Scored(SC_fast)", "FFF+Never"]
 
 # ── Simulation helper ─────────────────────────────────────────────────────────
 
-def run_cell(params: Params, policy_kwargs: dict, n_reps: int) -> tuple[float, float]:
+def run_cell(params: Params, policy_kwargs: dict, n_reps: int,
+             label: str = "") -> tuple[float, float]:
     """Run n_reps replications and return (mean_hours, stdev_hours)."""
     times = []
     for rep in range(n_reps):
-        sim = Simulator(params, seed=params.seed + rep, **policy_kwargs)
-        stats = sim.run()
+        stats = LOG.run(params, params.seed + rep, label, **policy_kwargs)
         times.append(stats.training_time_hours)
     mean = statistics.mean(times)
     stdev = statistics.stdev(times) if len(times) > 1 else 0.0
@@ -169,7 +171,7 @@ def run_sweep() -> dict:
 
             for pi, (policy_label, policy_factory) in enumerate(POLICIES):
                 kwargs = policy_factory()
-                mu, sd = run_cell(params, kwargs, N_REPS)
+                mu, sd = run_cell(params, kwargs, N_REPS, policy_label)
                 means[pi][mi][ri]  = mu
                 stdevs[pi][mi][ri] = sd
                 print(f"    {policy_label:<38s}  {mu:8.1f} ± {sd:5.1f} hrs")
@@ -459,6 +461,8 @@ def write_csv(results: dict) -> None:
 
 
 def main():
+    global LOG
+    LOG = sweep_common.ReplicationLog(fig_path("replications.csv"), __file__)
     print("AIReSim — 2-D Heatmap Sweep")
     print("=" * 65)
     print(f"\nGrid: {MULTIPLIERS} × {[f'{p:.2f}' for p in REPAIR_FAIL_PROBS]}")

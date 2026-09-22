@@ -58,6 +58,7 @@ Thumbs.db
 !examples/*_figures/sensitivity_summary.csv
 !examples/*_figures/diagnosis_sweep.csv
 !examples/*_figures/run.log
+!examples/*_figures/replications.csv
 examples/figures/
 figures/
 results/

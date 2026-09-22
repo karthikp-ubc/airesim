@@ -43,13 +43,15 @@ from dataclasses import dataclass
 
 _here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_here))
+sys.path.insert(0, _here)
 
 from airesim.params import Params
-from airesim.simulator import Simulator
+import sweep_common
 from airesim.policies import NeverRemove, ThresholdRemoval, ScoredRemoval
 
 # ── Output ────────────────────────────────────────────────────────────────────
 
+LOG = None  # ReplicationLog, created in main()
 FIGURES_DIR = os.path.join(_here, "scored_vs_threshold_figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
@@ -156,7 +158,7 @@ class PolicyResult:
 def run_policy(policy, params: Params, name: str = "", group: str = "") -> PolicyResult:
     times, retired, depleted = [], [], 0
     for rep in range(params.num_replications):
-        r = Simulator(params=params, removal_policy=policy, seed=params.seed + rep).run()
+        r = LOG.run(params, params.seed + rep, name, removal_policy=policy)
         times.append(r.training_time_hours)
         retired.append(float(r.servers_retired))
         if r.cluster_depleted:
@@ -354,6 +356,8 @@ def save_csv(s1_results, sweeps) -> None:
 
 
 def main():
+    global LOG
+    LOG = sweep_common.ReplicationLog(fig_path("replications.csv"), __file__)
     bad_ttf  = BAD_SERVER_TTF_DAYS
     good_ttf = GOOD_SERVER_TTF_DAYS
     headroom = BASE.working_pool_size - BASE.job_size - BASE.warm_standbys

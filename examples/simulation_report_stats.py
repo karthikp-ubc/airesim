@@ -21,8 +21,13 @@ _here = os.path.dirname(os.path.abspath(__file__))
 _root = os.path.dirname(_here)
 sys.path.insert(0, _root)
 
+import airesim.adaptive  # noqa: E402
 from airesim.adaptive import AdaptiveRunner  # noqa: E402
 from airesim.run import _load_params  # noqa: E402
+from sweep_common import MonitoredSimulator  # noqa: E402
+
+# Read-only monitor: same results as Simulator, adds faulty-server-in-pool samples.
+airesim.adaptive.Simulator = MonitoredSimulator
 
 OUT = os.path.join(_here, "simulation_report_figures", "results.csv")
 
@@ -40,7 +45,10 @@ def main() -> None:
               "successful_repairs", "failed_repairs", "servers_retired", "preemption_count",
               "host_selection_count", "job_stall_count", "cluster_depleted",
               "compute_hrs", "recovery_hrs", "host_selection_hrs", "wait_hrs",
-              "avg_run_duration_mins", "converged", "params_json"]
+              "avg_run_duration_mins", "bad_servers_cured", "bad_server_repair_failures",
+              "nonfaulty_repairs", "misattributed_repairs", "faulty_in_pool_initial",
+              "faulty_in_pool_timeavg", "faulty_in_pool_final", "faulty_in_active_timeavg",
+              "converged", "params_json"]
     with open(OUT, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields)
         w.writeheader()
@@ -63,6 +71,14 @@ def main() -> None:
                 "host_selection_hrs": repr(r.total_host_selection_time / 60.0),
                 "wait_hrs": repr(r.total_wait_time / 60.0),
                 "avg_run_duration_mins": repr(r.avg_run_duration),
+                "bad_servers_cured": r.bad_servers_cured,
+                "bad_server_repair_failures": r.bad_server_repair_failures,
+                "nonfaulty_repairs": r.nonfaulty_repairs,
+                "misattributed_repairs": r.misattributed_repairs,
+                "faulty_in_pool_initial": r.faulty_in_pool_initial,
+                "faulty_in_pool_timeavg": repr(r.faulty_in_pool_timeavg),
+                "faulty_in_pool_final": r.faulty_in_pool_final,
+                "faulty_in_active_timeavg": repr(r.faulty_in_active_timeavg),
                 "converged": int(report.converged),
                 "params_json": json.dumps(asdict(params), sort_keys=True),
             })

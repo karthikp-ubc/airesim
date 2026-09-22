@@ -51,6 +51,7 @@ from dataclasses import dataclass, field
 
 _here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_here))
+sys.path.insert(0, _here)
 
 import matplotlib
 matplotlib.use("Agg")
@@ -58,7 +59,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from airesim.params import Params
-from airesim.simulator import Simulator
+import sweep_common
 from airesim.policies import (
     NeverRemove, ThresholdRemoval, ScoredRemoval, CompositeRemovalPolicy,
 )
@@ -66,6 +67,7 @@ from airesim.scheduling_policies import DefaultHostSelection, FewestFailuresFirs
 
 # ── Output ─────────────────────────────────────────────────────────────────────
 
+LOG = None  # ReplicationLog, created in main()
 FIGURES_DIR = os.path.join(_here, "diagnosis_sweep_figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
@@ -234,15 +236,9 @@ def run_cell(combo: PolicyCombo, params: Params) -> CellResult:
         retire_label = combo.retire_label,
     )
     sched, retire = combo.make()
-    sim = Simulator(
-        params                = params,
-        host_selection_policy = sched,
-        removal_policy        = retire,
-        seed                  = params.seed,
-    )
     for rep in range(params.num_replications):
-        sim.seed = params.seed + rep
-        stats = sim.run()
+        stats = LOG.run(params, params.seed + rep, combo.label,
+                        host_selection_policy=sched, removal_policy=retire)
         cell.times.append(stats.total_training_time / 60)
         cell.retired.append(stats.servers_retired)
         cell.auto_repairs.append(stats.auto_repairs)
@@ -369,6 +365,8 @@ def save_csv(all_results: list[CellResult]) -> None:
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    global LOG
+    LOG = sweep_common.ReplicationLog(fig_path("replications.csv"), __file__)
     print("=" * 72)
     print("Diagnosis parameter sweep")
     print("Regime: 20× multiplier | 75% manual repair fail | 4600-server pool")

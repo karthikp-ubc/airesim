@@ -44,13 +44,15 @@ from dataclasses import dataclass, fields as dc_fields
 
 _here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_here))
+sys.path.insert(0, _here)
 
 from airesim.params import Params
-from airesim.simulator import Simulator
+import sweep_common
 from airesim.policies import NeverRemove, ThresholdRemoval
 
 # ── Output ────────────────────────────────────────────────────────────────────
 
+LOG = None  # ReplicationLog, created in main()
 FIGURES_DIR = os.path.join(_here, "threshold_sensitivity_figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
@@ -186,7 +188,8 @@ def run_cell(policy, params: Params) -> tuple[float, float, float, float, float]
     """Return (mean_time, stdev_time, mean_retired, stdev_retired, depleted_frac)."""
     times, retired, ndepleted = [], [], 0
     for rep in range(params.num_replications):
-        r = Simulator(params=params, removal_policy=policy, seed=params.seed + rep).run()
+        r = LOG.run(params, params.seed + rep, sweep_common.describe(policy),
+                    removal_policy=policy)
         times.append(r.training_time_hours)
         retired.append(float(r.servers_retired))
         if r.cluster_depleted:
@@ -378,6 +381,8 @@ def find_crossover(
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def main():
+    global LOG
+    LOG = sweep_common.ReplicationLog(fig_path("replications.csv"), __file__)
     print("AIReSim — ThresholdRemoval Sensitivity Analysis")
     print("=" * 70)
     headroom = BASE.working_pool_size - BASE.job_size - BASE.warm_standbys

@@ -1,0 +1,57 @@
+# commit: 2255b8cb6e6728223798d8527425758ae673e429
+# started: 2026-09-21T17:43:45.091888
+# command: python3 examples/job_length_sweep.py --workers 8
+
+  1/50 done
+  2/50 done
+  3/50 done
+  4/50 done
+  5/50 done
+  6/50 done
+  7/50 done
+  8/50 done
+  9/50 done
+  10/50 done
+  11/50 done
+  12/50 done
+  13/50 done
+  14/50 done
+  15/50 done
+  16/50 done
+  17/50 done
+  18/50 done
+  19/50 done
+  20/50 done
+  21/50 done
+  22/50 done
+  23/50 done
+  24/50 done
+  25/50 done
+  26/50 done
+  27/50 done
+  28/50 done
+  29/50 done
+  30/50 done
+  31/50 done
+  32/50 done
+  33/50 done
+  34/50 done
+  35/50 done
+  36/50 done
+  37/50 done
+  38/50 done
+  39/50 done
+  40/50 done
+  41/50 done
+  42/50 done
+  43/50 done
+  44/50 done
+  45/50 done
+  46/50 done
+  47/50 done
+  48/50 done
+  49/50 done
+  50/50 done
+wrote /home/karthik/Programs/airesim/examples/job_length_figures/replications.csv
+
+# finished: 2026-09-21T17:45:18.475813 exit=0

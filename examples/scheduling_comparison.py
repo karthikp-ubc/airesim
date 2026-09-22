@@ -43,6 +43,7 @@ from dataclasses import dataclass, field
 
 _here = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, os.path.dirname(_here))
+sys.path.insert(0, _here)
 
 import matplotlib
 matplotlib.use("Agg")
@@ -51,7 +52,7 @@ import matplotlib.patches as mpatches
 import numpy as np
 
 from airesim.params import Params
-from airesim.simulator import Simulator
+import sweep_common
 from airesim.policies import (
     NeverRemove, ThresholdRemoval, ScoredRemoval, CompositeRemovalPolicy,
 )
@@ -61,6 +62,7 @@ from airesim.scheduling_policies import (
 
 # ── Output ─────────────────────────────────────────────────────────────────────
 
+LOG = None  # ReplicationLog, created in main()
 FIGURES_DIR = os.path.join(_here, "scheduling_comparison_figures")
 os.makedirs(FIGURES_DIR, exist_ok=True)
 
@@ -190,15 +192,9 @@ class RunResult:
 
 def run_config(sched_policy, retire_policy, cfg: Config, params: Params) -> RunResult:
     result = RunResult(cfg=cfg)
-    sim = Simulator(
-        params                = params,
-        host_selection_policy = sched_policy,
-        removal_policy        = retire_policy,
-        seed                  = params.seed,
-    )
     for rep in range(params.num_replications):
-        sim.seed = params.seed + rep
-        stats = sim.run()
+        stats = LOG.run(params, params.seed + rep, cfg.label.replace("\n", " "),
+                        host_selection_policy=sched_policy, removal_policy=retire_policy)
         result.times.append(stats.total_training_time / 60)  # → hours
         result.retired.append(stats.servers_retired)
         if stats.cluster_depleted:
@@ -374,6 +370,8 @@ def save_csv(results: dict[tuple, RunResult]) -> None:
 # ── Main ───────────────────────────────────────────────────────────────────────
 
 def main() -> None:
+    global LOG
+    LOG = sweep_common.ReplicationLog(fig_path("replications.csv"), __file__)
     results: dict[tuple, RunResult] = {}
 
     print("=" * 70)
