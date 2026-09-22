@@ -12,22 +12,44 @@ of the silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
 
 ---
 
-> **Design caveat (2026-09-21).** In AIReSim the scheduling policy is consulted
-> only at full host selection. Warm-standby swaps take the oldest standby
-> (`Scheduler.swap_in_standby`) without consulting the policy, and repaired
-> servers that were in the job return to the standby list regardless of failure
-> history. The `FewestFailuresFirst`/`HighestScoreFirst` results below therefore
-> measure the policy's effect at the host selections that happen when the job
-> exhausts its warm standbys. They do not measure health-aware replacement as an
-> operator would implement it. This sweep now records host_selection_count per
-> replication (§below): 6.7–7.3 per run for `NeverRemove` policies and 24.9–27.7 for
-> `ScoredRemoval` in this (elevated-failure, 14-day) regime — still small next to the
-> ~1,450–2,800 failures per run here. At **paper-semantics defaults** (not this
-> sweep's regime) full host selection happens about 41 times per run against
-> ~11,000 failures (`SIMULATION_REPORT.md`; a similar sweep with realistic diagnosis
-> gets 37.7, `DIAGNOSIS_REALISTIC_REPORT.md`). `FewestFailuresFirst` here also reads
-> ground-truth failure counts (see `DIAGNOSIS_REALISTIC_REPORT.md` for the
-> attributed-count variant).
+> **Design note (2026-09-22, corrected).** An earlier version of this caveat argued
+> that `FewestFailuresFirst`'s results here don't generalize because "the policy is
+> rarely consulted" (only ~7 full selections per run against thousands of failures).
+> That explanation is wrong: `Scheduler.do_host_selection` re-picks the *entire* job
+> (`job_size + warm_standbys`) from the available pool each time it runs, so **one**
+> full selection can bench every server the policy currently regards as bad, up to
+> the pool's headroom (`working_pool_size - job_size - warm_standbys`). Between full
+> selections, `Scheduler.swap_in_standby` replaces a failed active server with the
+> oldest warm standby, FIFO, without consulting the policy; a full selection is
+> re-triggered only once standbys run out.
+>
+> `FewestFailuresFirst`'s benefit is bounded by two things instead: how much headroom
+> exists relative to the bad-server population, not by how rarely selection happens;
+> and how long an exclusion lasts before FIFO swap-ins and servers returned from
+> repair — cured or not — bring previously-excluded servers back into play at the
+> next full selection. In this sweep's regime, headroom is 488 servers
+> (`4,600 - 4,096 - 16`) against an initial bad population of ~368 (8% of the pool) —
+> headroom exceeds the entire bad population, so a full selection can exclude
+> essentially all of it. The per-replication data confirm this is what happens:
+> time-averaged faulty servers in the active job are **129.7** under
+> `FewestFailuresFirst` vs **170.9** under `Random` (24% fewer), and correspondingly
+> higher in the idle pool (242.3 vs 201.1) —
+> `FewestFailuresFirst` is benching bad servers, not just missing most selections
+> (`examples/scheduling_comparison_figures/replications.csv`, `faulty_in_active_timeavg`
+> / `faulty_in_pool_timeavg`, `FewestFailures+NeverRemove` vs `Random+NeverRemove`).
+>
+> At **paper-semantics defaults** (not this sweep's regime), headroom is only 48
+> servers (`4,160 - 4,096 - 16`) against an initial bad population of ~624 (15%) — 7.7%
+> coverage, vs 133% here — and systematic failures saturate early in the (256-day)
+> default run as that population is cured out from under it (`SIMULATION_REPORT.md`
+> §5a). Time-averaged faulty servers in the active job are statistically
+> indistinguishable between `FewestFailuresFirst` and `Random` at those parameters
+> (`DIAGNOSIS_REALISTIC_REPORT.md`). Both the small headroom and the saturation are
+> independent explanations for that null result; neither depends on the FIFO
+> standby-swap design. `FewestFailuresFirst` here also reads ground-truth failure
+> counts an operator may not have; `FewestAttributedFailuresFirst` has not been
+> tested in this (stress) regime — see `DIAGNOSIS_REALISTIC_REPORT.md` for the
+> attributed-count variant at paper defaults.
 
 ## 1. Executive Summary
 
@@ -126,10 +148,11 @@ Retirement drives most of the host-selection activity here (7 → 28 as retireme
 more aggressive), not the scheduling policy — `FewestFailuresFirst`/`HighestScoreFirst`
 act at slightly *fewer* host selections than `Random` because they route jobs away from
 recently-failed servers, which are also the ones most likely to fail again and trigger
-the next selection. In every column, host selections (7–28) remain far below the
-~1,450–2,800 failures per run this regime produces (§5.1-equivalent counts in the raw
-data), so §6–9's findings for `FewestFailuresFirst`/`HighestScoreFirst` describe the
-policy's effect at a small fraction of all replacement events, per the design caveat above.
+the next selection. Each of those full selections re-picks the *entire* job from the
+available pool (§ design note above), so the low count (7–28, vs ~1,450–2,800 failures
+per run) does not mean the policy rarely acts: headroom is large enough here (488
+servers against an initial bad population of ~368) that a handful of selections can
+exclude essentially the whole bad population, which is what drives §6–9's findings.
 
 ---
 

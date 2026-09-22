@@ -148,7 +148,7 @@ on average — roughly twice per hour throughout the 9,873-hour run.
 
 With `bad_server_regeneration` off (the default), a server only ever moves from bad to
 good, on a successful repair; nothing ever makes a good server bad again. The pool starts
-with a fixed number of bad servers (≈622 of 4 600, ≈13.5%, `systematic_failure_fraction`
+with a fixed number of bad servers (≈622 of 4,160, ≈15%, `systematic_failure_fraction`
 × pool size minus retirements) and that population can only shrink. Systematic failures
 should therefore **saturate** as the bad population is cured — new systematic failures
 become rarer over the run even though the random-failure rate stays constant. The 256-day
@@ -326,7 +326,7 @@ within-run randomness averages out, leaving very little run-to-run variance.
    average, not a stable rate.** With `bad_server_regeneration` off, a
    successful repair cures a bad server and nothing turns a good server bad,
    so the systematic-failure count is capped by the initial bad population
-   (~622 of 4,600 servers) and plateaus at 684.7 ± 19.3 over a 256-day run —
+   (~622 of 4,160 servers) and plateaus at 684.7 ± 19.3 over a 256-day run —
    **49.4% of that ceiling is reached in the first 15 compute-days** (§5a).
    Random failures have no such ceiling and grow roughly linearly with job
    length (600 at 15 days → 10,496 at 256 days), so systematic failures'

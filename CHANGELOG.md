@@ -4,6 +4,92 @@ All notable changes to AIReSim are recorded here.
 
 ---
 
+## [Unreleased] — 2026-09-22
+
+### Correction
+
+#### Report correction: the "policy rarely consulted" explanation for `FewestFailuresFirst`'s null result was wrong
+
+**Affected files:** `docs/SCHEDULING_COMPARISON_REPORT.md`, `docs/2D-HEAT_MAP_REPORT.md`,
+`docs/DIAGNOSIS_SWEEP_REPORT.md`, `docs/POLICY_SYNTHESIS_REPORT.md`,
+`docs/SIMULATION_REPORT.md`, `examples/diagnosis_realistic_report.py` (regenerates
+`docs/DIAGNOSIS_REALISTIC_REPORT.md`)
+
+Every report touching scheduling policy explained `FewestFailuresFirst`'s effect (or
+lack of one) by how often `Scheduler.do_host_selection` runs relative to the number of
+failures — e.g. "~99.7% of replacements bypass the policy" at the paper defaults. That's
+wrong: `do_host_selection` re-picks the *entire* job (`job_size + warm_standbys`) from
+the available pool each time it runs, not just the servers needed to fill a gap, so one
+full selection can bench every server the policy currently regards as bad, up to the
+pool's headroom (`working_pool_size − job_size − warm_standbys`). Only
+`Scheduler.swap_in_standby`, the FIFO warm-standby swap between full selections, ignores
+the policy.
+
+`FewestFailuresFirst`'s benefit is bounded by headroom relative to the bad-server
+population, not by consultation frequency. In the payoff regime (headroom 488 servers
+against an initial bad population of ~368, 8%) headroom exceeds the whole bad population;
+per-replication data confirm the exclusion (`faulty_in_active_timeavg`: 129.7 under
+`FewestFailuresFirst` vs 170.9 under `Random`, 24% fewer, correspondingly higher in the
+idle pool). At the paper defaults, headroom is only 48 servers against ~624 initially bad
+(7.7% coverage) — active-job faulty-server counts there are statistically
+indistinguishable between the two policies — and systematic failures also saturate early
+in the 256-day run (`SIMULATION_REPORT.md` §5a), so the null result at defaults has two
+independent causes, neither of them the FIFO standby design. All four reports' design
+caveats, `DIAGNOSIS_REALISTIC_REPORT.md`'s verdict text (`examples/diagnosis_realistic_report.py`,
+regenerated), and `POLICY_SYNTHESIS_REPORT.md`'s finding 3 (now finding 4) are rewritten
+around the corrected mechanism, with the benching evidence above.
+
+#### `POLICY_SYNTHESIS_REPORT.md` rewritten: accounting identity, a ≈2.3% ceiling at
+defaults, and why the payoff regime matters
+
+**Affected files:** `docs/POLICY_SYNTHESIS_REPORT.md`
+
+Beyond the `FewestFailuresFirst` correction above, the synthesis now states as findings:
+the accounting identity (`training_time = job_length + failures × recovery_time` + small
+host-selection and preemption terms, so every policy/parameter effect is exactly its
+effect on the failure count); that any node-management policy at the paper defaults is
+capped at ≈2.3% of training time (`systematic_failures × recovery_time` = 684.7 × 20 min
+≈ 228 h, from `SIMULATION_REPORT.md` §5a's saturation finding); and that the payoff
+regime's 14-day job matters because it's too short for its 28% per-attempt repair success
+rate (vs. 76% at the paper defaults) to cure the bad-server population before the job
+ends (73.8% cured, 26.2% still bad at job end) — not only because its failure-rate
+multiplier is high.
+
+#### Oracle caveats added: `FewestFailuresFirst` and `ThresholdRemoval` read ground truth, and `FewestAttributedFailuresFirst` is untested in the payoff regime
+
+**Affected files:** `docs/DIAGNOSIS_SWEEP_REPORT.md`, `docs/POLICY_SYNTHESIS_REPORT.md`
+
+Wherever a report credited either policy with robustness to misattribution or missed
+diagnosis, it now states that `FewestFailuresFirst` reads `total_failure_count` and
+`ThresholdRemoval` reads `failure_timestamps` — both recorded on the server that truly
+failed, before diagnosis runs, including failures diagnosis missed entirely — and that
+`FewestAttributedFailuresFirst`, the variant an operator without ground truth could
+actually deploy, has been tested only at the paper defaults (where headroom is too small
+for any scheduling policy to show an effect) and not in the payoff regime.
+
+#### Fixed: wrong pool size in `SIMULATION_REPORT.md` §5a and finding 7
+
+**Affected files:** `docs/SIMULATION_REPORT.md`
+
+§5a and finding 7 said the initial bad population was "≈622 of 4,600 servers, ≈13.5%" —
+4,600 is the payoff regime's working-pool size; the paper-default pool used by that
+section's own data is 4,160 (`config.yaml`), giving ≈622/4,160 ≈ 15%, matching
+`systematic_failure_fraction = 0.15`. Corrected both instances.
+
+#### Reconciled: `POLICY_SYNTHESIS_REPORT.md`'s bad-server-fraction numbers
+
+**Affected files:** `docs/POLICY_SYNTHESIS_REPORT.md`
+
+Finding 6 (statistical significance from 3% bad servers) and the recommendations table
+(a dependable recommendation from ≳12%) used different thresholds from
+`THRESHOLD_SENSITIVITY_REPORT.md` without saying so, reading as contradictory. Both
+numbers are correct and are now presented together as one monotonic curve from that
+report's own bad-server-fraction sweep: significant from 3% (144 servers, −55 h), through
+8% (−88.8 h — the payoff regime's own bad-server fraction) to a large, dependable −116 h
+to −175 h from 12% (576 servers) to 20% (960 servers).
+
+---
+
 ## [Unreleased] — 2026-09-21
 
 ### Changes

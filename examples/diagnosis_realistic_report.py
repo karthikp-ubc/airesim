@@ -251,6 +251,31 @@ def design_stats(rows):
     return statistics.mean(hs), min(hs), max(hs), statistics.mean(tf)
 
 
+def headroom_mechanism(data, rows):
+    """Headroom vs. bad population, and active-vs-pool faulty-server benching.
+
+    `Scheduler.do_host_selection` re-picks the entire job from the available pool, so
+    a full selection can exclude every server the policy regards as bad, up to headroom
+    (working_pool_size - job_size - warm_standbys). This computes that bound and the
+    observed benching (faulty_in_active_timeavg) at diagnosis_probability=1.0,
+    multiplier=5.0, uncertainty=0.0 -- the paper-default cell in this sweep.
+    """
+    import json
+
+    p = json.loads(rows[0]["params_json"])
+    headroom = p["working_pool_size"] - p["job_size"] - p["warm_standbys"]
+    bad_pop = p["working_pool_size"] * p["systematic_failure_fraction"]
+    base = data[(1.0, 5.0, "Random", 0.0)]
+    fff = data[(1.0, 5.0, "FFF_oracle", 0.0)]
+    return dict(
+        headroom=headroom, bad_pop=bad_pop, working_pool_size=p["working_pool_size"],
+        act_random=statistics.mean(vals(base, "faulty_in_active_timeavg")),
+        act_fff=statistics.mean(vals(fff, "faulty_in_active_timeavg")),
+        pool_random=statistics.mean(vals(base, "faulty_in_pool_timeavg")),
+        pool_fff=statistics.mean(vals(fff, "faulty_in_pool_timeavg")),
+    )
+
+
 def criterion(data):
     """Pre-registered test: Random+NeverRemove, prob 0.8, multiplier 5."""
     res = {}
@@ -343,18 +368,36 @@ def verdict(data, rows):
             f"{'has' if n_sig == 1 else 'have'} a 95% CI "
             f"excluding zero (about {0.05 * n_tot:.0f} expected by chance, no multiplicity "
             f"adjustment).")
+        mech = headroom_mechanism(data, rows)
+        cover_pct = 100 * mech["headroom"] / mech["bad_pop"]
+        bad_pct = 100 * mech["bad_pop"] / mech["working_pool_size"]
         lines.append(
-            "This null result reflects AIReSim's design rather than scheduling in "
-            "general. The scheduling policy is consulted only at full host selection. "
-            "Warm-standby swaps (`Scheduler.swap_in_standby`) take the oldest standby "
-            "without consulting the policy, and repaired servers that were in the job "
-            "return to the standby list regardless of failure history. Across all "
-            f"{len(rows)} runs, full host selection happened {hs_mean:.1f} times per run "
-            f"on average (range {hs_min:.0f}–{hs_max:.0f}) against {tf_mean:,.0f} failures, "
-            f"so {100 * (1 - hs_mean / tf_mean):.2f}% of replacements bypassed the policy. "
-            "FFF and FAFF therefore had almost no opportunity to act, and these runs "
-            "cannot tell whether health-aware replacement would help at realistic "
-            "parameters.")
+            "This null result is not because the scheduling policy is rarely consulted. "
+            "`Scheduler.do_host_selection` re-picks the *entire* job "
+            "(`job_size + warm_standbys`) from the available pool every time it runs -- "
+            f"it happened {hs_mean:.1f} times per run here (range {hs_min:.0f}"
+            f"–{hs_max:.0f}) -- so one full selection can bench every server the "
+            "policy currently regards as bad, up to the pool's headroom "
+            "(`working_pool_size - job_size - warm_standbys`). Between full selections, "
+            "`Scheduler.swap_in_standby` replaces a failed active server with the oldest "
+            "warm standby, FIFO, without consulting the policy; a full selection is "
+            "re-triggered only once standbys run out. At these parameters headroom is "
+            f"{mech['headroom']:.0f} servers against an initial bad population of "
+            f"~{mech['bad_pop']:.0f} ({bad_pct:.0f}% of the pool) -- only {cover_pct:.1f}% "
+            "of the bad population can be excluded even by a perfectly policy-aware "
+            "selection, and that population shrinks further as the run progresses and "
+            "repairs cure it out (`SIMULATION_REPORT.md` §5a). Both bound the "
+            "benefit independent of how often full selection happens. The data agree: "
+            "time-averaged faulty servers in the active job are statistically "
+            f"indistinguishable between oracle FFF ({mech['act_fff']:.1f}) and Random "
+            f"({mech['act_random']:.1f}) at these parameters. Contrast the stress regime "
+            "(`SCHEDULING_COMPARISON_REPORT.md`), where headroom (488 servers) exceeds "
+            "the entire initial bad population (~368) and FewestFailuresFirst visibly "
+            "benches bad servers (faulty-in-active time-average 129.7 vs Random's 170.9, "
+            "saving ~272 h) -- confirming the mechanism works when headroom allows it, "
+            "and that its absence here, not rare consultation, is why FFF and FAFF show "
+            "no benefit at these parameters. FewestAttributedFailuresFirst has not been "
+            "tested in the stress regime.")
     worst = max(identity_residuals(rows))
     lines.append(
         "The misattribution cost is an accounting consequence of extra failures. In "

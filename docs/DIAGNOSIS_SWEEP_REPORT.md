@@ -20,18 +20,34 @@ Figures: `examples/diagnosis_sweep_figures/`
 >    while it was still in `active_servers`, potentially adding it to `warm_standbys` and
 >    creating a duplicate in `active_servers` on the next standby swap.
 
-> **Design caveat (2026-09-21).** In AIReSim the scheduling policy is consulted
-> only at full host selection. Warm-standby swaps take the oldest standby
-> (`Scheduler.swap_in_standby`) without consulting the policy, and repaired
-> servers that were in the job return to the standby list regardless of failure
-> history. The `FewestFailuresFirst`/`HighestScoreFirst` results below therefore
-> measure the policy's effect at the host selections that happen when the job
-> exhausts its warm standbys. They do not measure health-aware replacement as an
-> operator would implement it. The number of full host selections per run was not
-> recorded for this sweep. At the paper defaults it is about 16 per run against
-> ~11,000 failures (`DIAGNOSIS_REALISTIC_REPORT.md`). `FewestFailuresFirst` here
-> also reads ground-truth failure counts (see `DIAGNOSIS_REALISTIC_REPORT.md` for
-> the attributed-count variant).
+> **Design note (2026-09-22, corrected).** An earlier version of this caveat argued
+> that `FewestFailuresFirst`'s results here don't generalize because full host
+> selection is "rarely consulted." That's wrong: `Scheduler.do_host_selection`
+> re-picks the *entire* job (`job_size + warm_standbys`) from the available pool
+> each time it runs, so one full selection can bench every server the policy
+> currently regards as bad, up to headroom
+> (`working_pool_size - job_size - warm_standbys`). Between full selections,
+> `Scheduler.swap_in_standby` replaces a failed active server with the oldest warm
+> standby, FIFO, without consulting the policy.
+>
+> This sweep uses the same stress-regime parameters as
+> `SCHEDULING_COMPARISON_REPORT.md` and `2D-HEAT_MAP_REPORT.md`
+> (`working_pool_size=4,600`, `job_size=4,096`, `warm_standbys=16`,
+> `systematic_failure_fraction=0.08`): headroom is 488 servers against an initial
+> bad population of ~368 (8%) — headroom exceeds the entire bad population, so a
+> full selection can exclude essentially all of it. Both of those reports'
+> per-replication data confirm `FewestFailuresFirst` measurably benches faulty
+> servers out of the active job at these parameters (see their design notes); this
+> sweep's own per-run host-selection counts and active/pool faulty-server
+> breakdowns were not logged and are not reproduced here. At **paper-semantics
+> defaults** (not this sweep's regime), headroom is only 48 servers against ~624
+> initially bad (7.7% coverage) and systematic failures saturate early
+> (`SIMULATION_REPORT.md` §5a), which is why `FewestFailuresFirst` shows no
+> measurable benefit there (`DIAGNOSIS_REALISTIC_REPORT.md`) — bounded by headroom
+> and saturation, not by consultation frequency. `FewestFailuresFirst` and
+> `ThresholdRemoval` below read ground-truth failure counts/timestamps, not
+> attributed blame (see §3.3 and §4); `FewestAttributedFailuresFirst` has not been
+> tested in this (stress) regime.
 
 ---
 
@@ -243,6 +259,13 @@ At `unc ≥ 0.6` the best combinations are `FewestFail+Thresh ≥2/7d` or
 
 ## 4  Practical guidance
 
+> Every recommendation below that names `FewestFailures` or `ThresholdRemoval` assumes
+> the ground truth those policies actually read: `total_failure_count` and
+> `failure_timestamps` are recorded on the server that truly failed at the moment it
+> fails, before diagnosis runs — including failures diagnosis misses entirely. An
+> operator using the attributed-count variant (`FewestAttributedFailuresFirst`) would
+> not have this; it has not been tested at these (stress-regime) parameters.
+
 ### When to adjust `diagnosis_probability`  (uncertainty = 0)
 
 | prob | Recommended policy | Rationale |
@@ -268,12 +291,17 @@ At `unc ≥ 0.6` the best combinations are `FewestFail+Thresh ≥2/7d` or
 
 - **FewestFailures is diagnosis-agnostic:** It uses raw `total_failure_count` (actual hardware
   failures, not attributed blame), making it the most robust scheduling policy under
-  misattribution. At `unc = 1.0` it saves 875 h vs. Random scheduling alone.
+  misattribution *among the policies tested here* — this assumes access to that
+  ground-truth count, which an operator relying on the diagnosis pipeline would not have;
+  `FewestAttributedFailuresFirst`, the attributed-count variant an operator could actually
+  deploy, has not been tested at these (stress-regime) parameters. At `unc = 1.0` it saves
+  875 h vs. Random scheduling alone.
 
 - **ThresholdRemoval's partial immunity breaks at high uncertainty:** It can leverage
   `failure_timestamps` (actual failures, not attributed blame) only for servers that enter
-  repair. At `unc = 1.0`, only innocent servers enter repair, so ThresholdRemoval cannot act on
-  the bad servers' timestamps.
+  repair — also ground truth, recorded on the server before diagnosis runs, including
+  failures diagnosis missed. At `unc = 1.0`, only innocent servers enter repair, so
+  ThresholdRemoval cannot act on the bad servers' timestamps.
 
 ---
 
