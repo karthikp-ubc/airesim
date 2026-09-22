@@ -55,7 +55,8 @@ float training time, matches; the 60-run check is enabled with
 **Impact.** Anything generated between `8896140` and this change used the
 outcome-conditioned semantics. For example, `config.yaml` seeds 42-71 give a mean
 training time of 9,872.90 h under the paper's model versus 9,832.33 h under the
-reverted semantics. The reports and CSVs from that period have not been regenerated.
+reverted semantics. The reports and CSVs from that period were regenerated on 2026-09-21 under the
+paper's semantics (see the commits from `0cab8fb` onward).
 
 ---
 
