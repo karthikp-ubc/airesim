@@ -35,19 +35,26 @@ and by 42–377 h across repair quality. Its best result is −503 h (19%). The 
 severity: at mild settings (5×, or 72% fix rate) it is only 36–44 h (about 2%) for 240–255
 retirements.
 
-**4. `FewestFailuresFirst` scheduling is free and works by benching bad servers, not by
-acting often.** `Scheduler.do_host_selection` re-picks the *entire* job from the available
-pool each time it runs, so one full selection can exclude every server the policy regards
-as bad, up to headroom (`working_pool_size − job_size − warm_standbys`); between full
-selections, standby swaps are FIFO and policy-blind. In the payoff regime, headroom (488)
-exceeds the entire initial bad population (~368, 8%), and the data confirm the exclusion
-happens: time-averaged faulty servers in the active job are 129.7 under
-`FewestFailuresFirst` vs 170.9 under `Random` (24% fewer), correspondingly higher in the
-idle pool (242.3 vs 201.1). It saves 272 h (11.4%) alone, is faster than the baseline in
-all 25 cells of a 5×5 severity grid, and is statistically tied with `SC_fast` in 18 of them;
-`SC_fast` is clearly ahead only at ≥20× with ≥75% repair-fail (42–135 h). At the paper
-defaults headroom is only 48 servers against an initial bad population of ~624 (15%) —
-7.7% coverage, vs 133% in the payoff regime — and it shows **no measurable benefit** (CIs
+**4. `FewestFailuresFirst` scheduling is free and works by benching known-bad servers,
+not by acting often, and it trades curing them for avoiding them.**
+`Scheduler.do_host_selection` re-picks the *entire* job from the available pool each time
+it runs, so one full selection can exclude every server the policy currently regards as
+bad — one that has already failed at least once, since a bad server that hasn't yet
+failed looks identical to a good one — up to headroom
+(`working_pool_size − job_size − warm_standbys`); between full selections, standby swaps
+are FIFO and policy-blind. In the payoff regime, headroom (488) exceeds the entire initial
+bad population (~368, 8%), and the data show the measured effect: time-averaged faulty
+servers in the active job are 129.7 under `FewestFailuresFirst` vs 170.9 under `Random`, a
+24% reduction (16% in the 2-D heat-map sweep) — not near-total exclusion. Counted across
+the *whole* working pool (active job included), faulty servers are actually higher under
+`FewestFailuresFirst` (242.3 vs 201.1) — subtracting the active count leaves 112.6 idle
+(benched) vs 30.2 — because a benched bad server never fails, so it never enters repair
+and never gets cured; `FewestFailuresFirst` trades curing bad servers for avoiding them
+and still wins. It saves 272 h (11.4%) alone, is faster than the baseline in all 25 cells
+of a 5×5 severity grid, and is statistically tied with `SC_fast` in 18 of them; `SC_fast`
+is clearly ahead only at ≥20× with ≥75% repair-fail (42–135 h). At the paper defaults
+headroom is only 48 servers against an initial bad population of ~624 (15%) — 7.7%
+coverage, vs 133% in the payoff regime — and it shows **no measurable benefit** (CIs
 exclude any benefit above about 18 h, 0.2%; active-job faulty-server counts are
 statistically indistinguishable between the two policies, `DIAGNOSIS_REALISTIC_REPORT.md`).
 This is a headroom and saturation limit (findings 5–6), not a consultation-frequency

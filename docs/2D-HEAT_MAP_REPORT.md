@@ -20,11 +20,22 @@ silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
 > pool). Between full selections, `Scheduler.swap_in_standby` replaces a failed
 > active server with the oldest warm standby, FIFO, without consulting the policy.
 >
-> The per-replication data confirm the benching mechanism holds across this sweep:
-> averaged over all 25 cells, time-averaged faulty servers in the active job are
-> **150.0** under `FewestFailuresFirst+NeverRemove` vs **179.2** under
-> `Random+NeverRemove` (16% fewer), and correspondingly higher in the idle pool
-> (229.3 vs 207.7) — `FewestFailuresFirst` is benching bad servers
+> `FewestFailuresFirst` can only bench a bad server that has already failed at least
+> once — one that hasn't yet failed looks identical to a good server — so headroom
+> above the bad population lets it bench every *known*-bad server, not the whole
+> population outright. The per-replication data show the measured effect: averaged
+> over all 25 cells, time-averaged faulty servers in the active job are **150.0**
+> under `FewestFailuresFirst+NeverRemove` vs **179.2** under `Random+NeverRemove`, a
+> **16%** reduction — not near-total exclusion.
+>
+> `faulty_in_pool_timeavg` counts bad servers across the whole working pool — active
+> job included, per `MonitoredSimulator._monitor` in `examples/sweep_common.py` — not
+> just the idle portion. It is *higher* under `FewestFailuresFirst` (229.3) than
+> `Random` (207.7); subtracting the active-job count leaves the idle (benched) count:
+> **79.3** under `FewestFailuresFirst` vs **28.6** under `Random`.
+> `FewestFailuresFirst` keeps *more* bad servers in the cluster overall — a benched
+> bad server never fails, so it never enters repair and never gets cured. It trades
+> curing bad servers for avoiding them, and still wins here
 > (`examples/2d_heatmap_figures/replications.csv`, `faulty_in_active_timeavg` /
 > `faulty_in_pool_timeavg`). See `SCHEDULING_COMPARISON_REPORT.md`'s design note for
 > the full mechanism and the contrast with paper-semantics defaults, where headroom

@@ -27,14 +27,28 @@ of the silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
 > exists relative to the bad-server population, not by how rarely selection happens;
 > and how long an exclusion lasts before FIFO swap-ins and servers returned from
 > repair — cured or not — bring previously-excluded servers back into play at the
-> next full selection. In this sweep's regime, headroom is 488 servers
-> (`4,600 - 4,096 - 16`) against an initial bad population of ~368 (8% of the pool) —
-> headroom exceeds the entire bad population, so a full selection can exclude
-> essentially all of it. The per-replication data confirm this is what happens:
-> time-averaged faulty servers in the active job are **129.7** under
-> `FewestFailuresFirst` vs **170.9** under `Random` (24% fewer), and correspondingly
-> higher in the idle pool (242.3 vs 201.1) —
-> `FewestFailuresFirst` is benching bad servers, not just missing most selections
+> next full selection. It's also bounded by a third thing headroom alone doesn't
+> capture: `FewestFailuresFirst` sorts by *failure history*, so it can only bench a
+> bad server that has already failed at least once — a bad server that hasn't yet
+> failed looks identical to a good one and isn't excluded. In this sweep's regime,
+> headroom is 488 servers (`4,600 - 4,096 - 16`) against an initial bad population of
+> ~368 (8% of the pool) — headroom above the bad population lets a full selection
+> bench every *known*-bad server (one that has already failed), not the whole
+> population outright. The per-replication data show the measured effect: time-averaged
+> faulty servers in the active job are **129.7** under `FewestFailuresFirst` vs
+> **170.9** under `Random`, a **24%** reduction — not near-total exclusion.
+>
+> `faulty_in_pool_timeavg` (`examples/scheduling_comparison_figures/replications.csv`)
+> counts bad servers across the whole working pool — active job included, per
+> `MonitoredSimulator._monitor` in `examples/sweep_common.py` — not just the idle
+> portion. It is *higher* under `FewestFailuresFirst` (242.3) than `Random` (201.1);
+> subtracting the active-job count leaves the idle (benched) count: **112.6** under
+> `FewestFailuresFirst` vs **30.2** under `Random`. `FewestFailuresFirst` keeps *more*
+> bad servers in the cluster overall, not fewer — a benched bad server never fails, so
+> it never enters repair and never gets cured. `FewestFailuresFirst` trades curing bad
+> servers for avoiding them; it still wins here because avoiding a failure in the
+> active job is worth more (one `recovery_time`) than the alternative cadence of
+> failing and being repaired
 > (`examples/scheduling_comparison_figures/replications.csv`, `faulty_in_active_timeavg`
 > / `faulty_in_pool_timeavg`, `FewestFailures+NeverRemove` vs `Random+NeverRemove`).
 >
@@ -151,8 +165,10 @@ recently-failed servers, which are also the ones most likely to fail again and t
 the next selection. Each of those full selections re-picks the *entire* job from the
 available pool (§ design note above), so the low count (7–28, vs ~1,450–2,800 failures
 per run) does not mean the policy rarely acts: headroom is large enough here (488
-servers against an initial bad population of ~368) that a handful of selections can
-exclude essentially the whole bad population, which is what drives §6–9's findings.
+servers against an initial bad population of ~368) for a handful of selections to
+bench every server that has already revealed itself as bad, which is what drives
+§6–9's findings (a measured 24% reduction in active-job faulty servers, not near-total
+exclusion — § design note above).
 
 ---
 

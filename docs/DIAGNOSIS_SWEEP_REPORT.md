@@ -30,15 +30,19 @@ Figures: `examples/diagnosis_sweep_figures/`
 > `Scheduler.swap_in_standby` replaces a failed active server with the oldest warm
 > standby, FIFO, without consulting the policy.
 >
-> This sweep uses the same stress-regime parameters as
-> `SCHEDULING_COMPARISON_REPORT.md` and `2D-HEAT_MAP_REPORT.md`
-> (`working_pool_size=4,600`, `job_size=4,096`, `warm_standbys=16`,
-> `systematic_failure_fraction=0.08`): headroom is 488 servers against an initial
-> bad population of ~368 (8%) — headroom exceeds the entire bad population, so a
-> full selection can exclude essentially all of it. Both of those reports'
-> per-replication data confirm `FewestFailuresFirst` measurably benches faulty
-> servers out of the active job at these parameters (see their design notes); this
-> sweep's own per-run host-selection counts and active/pool faulty-server
+> `FewestFailuresFirst` can only bench a bad server that has already failed at least
+> once — one that hasn't yet failed looks identical to a good server. This sweep uses
+> the same stress-regime parameters as `SCHEDULING_COMPARISON_REPORT.md` and
+> `2D-HEAT_MAP_REPORT.md` (`working_pool_size=4,600`, `job_size=4,096`,
+> `warm_standbys=16`, `systematic_failure_fraction=0.08`): headroom is 488 servers
+> against an initial bad population of ~368 (8%) — headroom above the bad population
+> lets a full selection bench every *known*-bad server, not the whole population
+> outright. Both of those reports' per-replication data confirm the measured effect —
+> a 24% (scheduling sweep) to 16% (heat map) reduction in time-averaged faulty
+> servers in the active job, not near-total exclusion — and that
+> `FewestFailuresFirst` keeps *more* bad servers in the cluster overall (they're
+> benched, not cured) while still winning on training time (see their design notes).
+> This sweep's own per-run host-selection counts and active/pool faulty-server
 > breakdowns were not logged and are not reproduced here. At **paper-semantics
 > defaults** (not this sweep's regime), headroom is only 48 servers against ~624
 > initially bad (7.7% coverage) and systematic failures saturate early

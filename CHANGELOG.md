@@ -26,18 +26,34 @@ pool's headroom (`working_pool_size − job_size − warm_standbys`). Only
 the policy.
 
 `FewestFailuresFirst`'s benefit is bounded by headroom relative to the bad-server
-population, not by consultation frequency. In the payoff regime (headroom 488 servers
-against an initial bad population of ~368, 8%) headroom exceeds the whole bad population;
-per-replication data confirm the exclusion (`faulty_in_active_timeavg`: 129.7 under
-`FewestFailuresFirst` vs 170.9 under `Random`, 24% fewer, correspondingly higher in the
-idle pool). At the paper defaults, headroom is only 48 servers against ~624 initially bad
-(7.7% coverage) — active-job faulty-server counts there are statistically
+population, not by consultation frequency — and further bounded because it can only
+bench a bad server that has already failed at least once; one that hasn't yet failed
+looks identical to a good one. In the payoff regime (headroom 488 servers against an
+initial bad population of ~368, 8%) headroom exceeds the whole bad population, letting a
+full selection bench every *known*-bad server; per-replication data show the measured
+effect is a 24% reduction in time-averaged faulty servers in the active job
+(`faulty_in_active_timeavg`: 129.7 under `FewestFailuresFirst` vs 170.9 under `Random`),
+not near-total exclusion. At the paper defaults, headroom is only 48 servers against ~624
+initially bad (7.7% coverage) — active-job faulty-server counts there are statistically
 indistinguishable between the two policies — and systematic failures also saturate early
 in the 256-day run (`SIMULATION_REPORT.md` §5a), so the null result at defaults has two
 independent causes, neither of them the FIFO standby design. All four reports' design
 caveats, `DIAGNOSIS_REALISTIC_REPORT.md`'s verdict text (`examples/diagnosis_realistic_report.py`,
 regenerated), and `POLICY_SYNTHESIS_REPORT.md`'s finding 3 (now finding 4) are rewritten
 around the corrected mechanism, with the benching evidence above.
+
+**Follow-up correction (same day):** `faulty_in_pool_timeavg`
+(`MonitoredSimulator._monitor` in `examples/sweep_common.py`) counts bad servers across
+the *whole* working pool, active job included — not the idle pool, as first written.
+Idle (benched) bad servers are `faulty_in_pool_timeavg − faulty_in_active_timeavg`:
+112.6 under `FewestFailuresFirst` vs 30.2 under `Random` in the payoff regime (79.3 vs
+28.6 in the 2-D heat-map sweep). `faulty_in_pool_timeavg` itself is *higher* under
+`FewestFailuresFirst` (242.3 vs 201.1) — it keeps more bad servers in the cluster
+overall, because a benched server never fails and so never enters repair and never gets
+cured; it trades curing bad servers for avoiding them, and still wins. The "a full
+selection can exclude essentially all of it" language was also removed: the measured
+active-job reduction is 24% (scheduling sweep) and 16% (heat map), not near-total
+exclusion.
 
 #### `POLICY_SYNTHESIS_REPORT.md` rewritten: accounting identity, a ≈2.3% ceiling at
 defaults, and why the payoff regime matters
