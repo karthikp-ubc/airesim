@@ -8,6 +8,9 @@ different knobs — spare capacity, repair pipelines, warm standbys, failure rat
 scheduling policies, and diagnosis quality — affect end-to-end training time and
 cluster utilization.
 
+**Arriving from the DSN'26 paper?** See [`docs/FINDINGS.md`](docs/FINDINGS.md) for a
+two-page summary of what this repo has found at the paper's Table I defaults and beyond.
+
 ## Quick Start
 
 ```bash
@@ -21,7 +24,8 @@ python -m airesim.run examples/paper_table1_sweep.py
 pytest tests/
 ```
 
-79 tests across 5 test modules, all passing.
+128 tests across 10 test modules, all passing (1 skipped by default — a slower
+full-equivalence check enabled with `AIRESIM_FULL_EQUIVALENCE=1`).
 
 ## Linting
 
@@ -37,13 +41,18 @@ ruff check airesim/ tests/ --fix  # auto-fix safe issues
 Both `pytest` and `ruff check` run automatically on every push and pull request via
 `.github/workflows/test.yml`.
 
-| Test file | What it covers |
-|-----------|---------------|
-| `tests/test_airesim.py` | Core params, server state machine, coordinator, pool, scheduler, full simulation, sweeps, failure distributions |
-| `tests/test_edge_cases.py` | Race-condition fixes: warm-standby callback, misdiagnosis double-submit, missed-signal event |
-| `tests/test_scored_removal.py` | `ScoredRemoval` score arithmetic, retirement thresholds, snapshot, integration |
-| `tests/test_scheduling_policies.py` | `HighestScoreFirst` ordering, untracked servers, reset, integration with `ScoredRemoval` |
-| `tests/test_diagnosis_probability.py` | `diagnosis_probability` and `diagnosis_uncertainty` parameter validation and simulation behaviour; floating-server and duplication bug regressions |
+| Test file | Cases | What it covers |
+|-----------|-------|---------------|
+| `tests/test_airesim.py` | 23 | Core params, server state machine, coordinator, pool, scheduler, full simulation, sweeps, failure distributions |
+| `tests/test_scored_removal.py` | 24 | `ScoredRemoval` score arithmetic, retirement thresholds, snapshot, integration |
+| `tests/test_diagnosis_probability.py` | 18 | `diagnosis_probability` and `diagnosis_uncertainty` parameter validation and simulation behaviour; floating-server and duplication bug regressions |
+| `tests/test_scheduling_policies.py` | 14 | `DefaultHostSelection` full-pool sampling, `HighestScoreFirst` ordering, untracked servers, reset, integration with `ScoredRemoval` |
+| `tests/test_repair_escalation_policy.py` | 14 | `RepairEscalationPolicy` is actually consulted (not recomputed inline); `DefaultRepairEscalation` vs. `EscalateOnDetectedFailure` semantics; auto-repair-outcome contract |
+| `tests/test_topology.py` | 13 | Rack assignment (`assign_racks`), `PackedByRackFirst` packing/spanning, `enable_topology` on/off integration |
+| `tests/test_prefix_equivalence.py` | 8 | Default escalation policy reproduces the pre-`8896140` simulator bit-for-bit, against golden values in `tests/data/prefix_golden.json` |
+| `tests/test_attributed_failures.py` | 6 | `attributed_failure_count` vs. ground-truth `total_failure_count` under misattribution; `FewestAttributedFailuresFirst` |
+| `tests/test_edge_cases.py` | 5 | Race-condition fixes: warm-standby callback, misdiagnosis double-submit, missed-signal event |
+| `tests/test_bad_server_repairs.py` | 3 | Repair counters: cures (bad → good) vs. silent failures; only consequential for servers that were actually bad |
 
 
 ## File Structure
@@ -118,6 +127,7 @@ See `airesim/params.py` for the full list. Key inputs:
 - `recovery_time` — checkpoint reload time after any failure
 - `auto_repair_time`, `manual_repair_time` — mean repair durations
 - `prob_auto_to_manual`, `auto_repair_fail_prob`, `manual_repair_fail_prob` — pipeline probabilities
+- Escalation is independent of silent auto-repair failure, per the DSN'26 model: auto repair escalates to manual with probability `prob_auto_to_manual` regardless of whether the (unobservable) auto-repair outcome would have succeeded (see `docs/FINDINGS.md` §4, `CHANGELOG.md`)
 
 **Diagnosis quality** *(both in [0, 1])*
 - `diagnosis_probability` — P(failure triggers a repair attempt on any server). At 0, every failure goes undiagnosed: the failed server auto-recovers without entering the repair pipeline.
@@ -292,6 +302,12 @@ results.summary()
 ## Outputs
 
 Per simulation run (`StatsCollector`):
+
+`total_training_time` is exactly `job_length + total_failures × recovery_time +
+host_selection_count × host_selection_time + preemption_count ×
+preemption_wait_time` (checkpoints are assumed frequent enough that no separate
+lost-work term is charged beyond `recovery_time`; verified to a residual of ~1e-10 h
+across 1,200 runs — see `docs/FINDINGS.md` §1).
 
 - `total_training_time` — wall-clock simulated time to job completion (minutes)
 - `total_compute_time`, `total_recovery_time`, `total_host_selection_time`
