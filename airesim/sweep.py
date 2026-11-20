@@ -74,18 +74,61 @@ class SweepResult:
 
 
 class OneWaySweep:
-    """Sweep one parameter across a list of values."""
+    """Sweep one parameter across a list of values.
+
+    Two call forms are accepted::
+
+        OneWaySweep("systematic_failure_fraction", [0.1, 0.2, 0.3])
+        OneWaySweep("Systematic Failure Fraction", "systematic_failure_fraction",
+                    [0.1, 0.2, 0.3])          # the paper's form: display label first
+
+    Positional arguments after ``values`` follow the keyword order below; every
+    argument may also be given by keyword.
+    """
+
+    _POSITIONAL = (
+        "param_name", "values", "base_params", "num_replications",
+        "host_selection_policy", "escalation_policy", "removal_policy",
+    )
 
     def __init__(
         self,
-        param_name: str,
-        values: list[Any],
+        *args: Any,
+        param_name: str | None = None,
+        values: list[Any] | None = None,
         base_params: Params | None = None,
         num_replications: int = 30,
         host_selection_policy: HostSelectionPolicy | None = None,
         escalation_policy: RepairEscalationPolicy | None = None,
         removal_policy: ServerRemovalPolicy | None = None,
+        label: str | None = None,
     ):
+        kw = dict(
+            param_name=param_name, values=values, base_params=base_params,
+            num_replications=num_replications, host_selection_policy=host_selection_policy,
+            escalation_policy=escalation_policy, removal_policy=removal_policy,
+        )
+        positional = list(args)
+        if len(positional) >= 2 and isinstance(positional[1], str):
+            if label is not None:
+                raise TypeError("OneWaySweep got the label both positionally and by keyword")
+            label = positional.pop(0)  # paper form: (label, param_name, values, ...)
+        if len(positional) > len(self._POSITIONAL):
+            raise TypeError("OneWaySweep got too many positional arguments")
+        for name, val in zip(self._POSITIONAL, positional):
+            default = 30 if name == "num_replications" else None
+            if kw[name] != default:
+                raise TypeError(f"OneWaySweep got multiple values for {name!r}")
+            kw[name] = val
+        if kw["param_name"] is None or kw["values"] is None:
+            raise TypeError("OneWaySweep requires param_name and values")
+
+        param_name, values = kw["param_name"], list(kw["values"])
+        base_params, num_replications = kw["base_params"], kw["num_replications"]
+        host_selection_policy = kw["host_selection_policy"]
+        escalation_policy = kw["escalation_policy"]
+        removal_policy = kw["removal_policy"]
+        self.label = label
         self.param_name = param_name
         self.values = values
         self.base_params = base_params or Params()
@@ -109,7 +152,7 @@ class OneWaySweep:
             A ``SweepResult`` containing one ``AggregateStats`` per swept value.
         """
         result = SweepResult(
-            sweep_name=f"OneWay({self.param_name})",
+            sweep_name=self.label or f"OneWay({self.param_name})",
             param_name=self.param_name,
         )
 

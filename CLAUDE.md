@@ -76,12 +76,13 @@ airesim/                    # source package
 ├── run.py                  # CLI entry point
 └── __init__.py
 
-tests/                      # 97 tests across 6 modules, all passing
+tests/                      # 146 tests across 11 modules, all passing
 ├── test_airesim.py         # Core params, server, coordinator, pool, scheduler, sweeps (23)
 ├── test_edge_cases.py      # Race-condition / bug-regression tests (5)
 ├── test_scored_removal.py  # ScoredRemoval unit + integration (24)
 ├── test_scheduling_policies.py   # DefaultHostSelection, HighestScoreFirst ordering, reset (14)
 ├── test_diagnosis_probability.py # diagnosis_probability / diagnosis_uncertainty (18)
+├── test_paper_conformance.py     # stall threshold, spare return, age-aware sampling (18)
 └── test_topology.py        # rack assignment, PackedByRackFirst, enable_topology flag (13)
 
 docs/

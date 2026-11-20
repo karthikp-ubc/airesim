@@ -66,8 +66,8 @@ lognormal_sigma: 1.0
 
 # P(failure triggers a repair attempt on any server).
 # At 1.0 every failure is diagnosed; at 0.0 every failed server auto-recovers
-# without entering the repair pipeline.
-diagnosis_probability: 1.0
+# without entering the repair pipeline.  Table I default: 0.8.
+diagnosis_probability: 0.8
 
 # P(wrong server blamed | failure diagnosed).
 # At 0.0 the actual failed server is always identified correctly.
@@ -85,6 +85,10 @@ host_selection_time: 3.0
 
 # Time to preempt a job from the spare pool and move its server to working (minutes).
 preemption_wait_time: 20.0
+
+# Give servers borrowed from the spare pool back once the working pool could
+# re-host the whole job (job_size + warm_standbys) without them (paper §II-B).
+return_borrowed_spares: true
 
 # ── Repair pipeline ───────────────────────────────────────────────────────────
 
@@ -113,6 +117,10 @@ bad_server_regeneration: false
 
 # How often the regeneration process runs (minutes). Default: 30 days.
 bad_server_regen_interval: 43200   # 30 * 24 * 60
+
+# Each interval, int(good × systematic_failure_fraction × scale) good servers
+# (at least one) become bad.  The paper does not specify a rate.
+bad_server_regen_scale: 0.1
 
 # ── RNG seed ─────────────────────────────────────────────────────────────────
 

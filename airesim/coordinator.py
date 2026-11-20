@@ -16,6 +16,7 @@ from __future__ import annotations
 
 import math
 import random
+from statistics import NormalDist
 from typing import TYPE_CHECKING
 
 import simpy
@@ -56,10 +57,12 @@ class Coordinator:
         minimum of N independent Exp(λ_i) is Exp(Σλ_i), so only two RNG
         calls are needed regardless of N.
 
-        For Weibull and lognormal, samples a TTF per server and takes the
-        minimum directly (O(N) calls).  This is still fast because the
-        expensive part of the original design was SimPy process overhead,
-        not sampling.
+        For Weibull and lognormal, samples each server's *residual* life given
+        its current age (job-running time since it was last renewed) and takes
+        the minimum (O(N) calls).  This is still fast because the expensive
+        part of the original design was SimPy process overhead, not sampling.
+
+        Every server in ``servers`` ages by the returned compute duration.
 
         Returns:
             (failed_server, compute_duration) — or (None, remaining_job_time)
@@ -70,6 +73,9 @@ class Coordinator:
         )
 
         yield self.env.timeout(time_to_failure)
+
+        for s in servers:
+            s.age += time_to_failure
 
         if failed_server is None:
             return None, remaining_job_time
@@ -147,11 +153,11 @@ class Coordinator:
         servers: list[Server],
         remaining_job_time: float,
     ) -> tuple[float, Server | None]:
-        """Per-server TTF sampling; take the minimum (O(N) RNG calls)."""
+        """Per-server residual-life sampling; take the minimum (O(N) RNG calls)."""
         min_ttf = float('inf')
         failed_server = None
         for s in servers:
-            ttf = self._sample_ttf(s.failure_rate)
+            ttf = self._sample_residual(s.failure_rate, s.age)
             if ttf < min_ttf:
                 min_ttf = ttf
                 failed_server = s
@@ -162,21 +168,36 @@ class Coordinator:
         return min_ttf, failed_server
 
     def _sample_ttf(self, rate: float) -> float:
-        """Sample a single time-to-failure for a server with the given rate.
+        """Sample a time-to-failure for a new (age-zero) server with the given rate."""
+        return self._sample_residual(rate, 0.0)
 
-        The distribution is parameterised so that its mean equals 1/rate,
-        matching the exponential baseline.
+    def _sample_residual(self, rate: float, age: float) -> float:
+        """Sample the remaining life of a server of the given age, conditioned on survival.
+
+        The distribution is parameterised so that its (unconditional) mean equals
+        ``1/rate``, matching the exponential baseline.  Sampling is by inversion of
+        the conditional survival function S(age + t) / S(age).
         """
         if rate <= 0:
             return float('inf')
         mean_ttf = 1.0 / rate
+        e = self.rng.expovariate(1.0)  # -ln U, U ~ Uniform(0, 1]
         if self.failure_distribution == 'weibull':
-            # weibullvariate(alpha, beta): mean = alpha * Γ(1 + 1/beta)
-            # Solve for alpha so that mean == mean_ttf.
+            # S(t) = exp(-(t/alpha)^k), mean = alpha * Γ(1 + 1/k).
+            # ((age + t)/alpha)^k = (age/alpha)^k + E
             k = self.weibull_shape
             alpha = mean_ttf / math.gamma(1.0 + 1.0 / k)
-            return self.rng.weibullvariate(alpha, k)
+            return alpha * ((age / alpha) ** k + e) ** (1.0 / k) - age
         # lognormal: mean = exp(mu + sigma²/2)  →  mu = ln(mean_ttf) - sigma²/2
         sigma = self.lognormal_sigma
         mu = math.log(mean_ttf) - 0.5 * sigma * sigma
-        return self.rng.lognormvariate(mu, sigma)
+        # Survival at age, computed in the upper tail to keep precision for old servers.
+        s_age = 1.0
+        if age > 0:
+            s_age = 0.5 * math.erfc((math.log(age) - mu) / sigma / math.sqrt(2.0))
+        s = s_age * math.exp(-e)  # target survival S(age + t) = S(age) · U
+        if s <= 0.0:
+            return 0.0  # astronomically old server: fails immediately
+        s = min(s, math.nextafter(1.0, 0.0))  # inv_cdf needs 0 < p < 1
+        z = -NormalDist().inv_cdf(s)
+        return max(0.0, math.exp(mu + sigma * z) - age)

@@ -40,6 +40,9 @@ class Params:
 
     # ── Preemption ───────────────────────────────────────────────────────────
     preemption_wait_time: float = 20.0  # minutes to preempt a job from spare pool
+    # Return servers borrowed from the spare pool once the working pool can re-host
+    # the whole job (job_size + warm_standbys) without them (paper §II-B).
+    return_borrowed_spares: bool = True
 
     # ── Repair pipeline ─────────────────────────────────────────────────────
     auto_repair_time: float = 120.0  # minutes for automated repair
@@ -54,12 +57,15 @@ class Params:
     lognormal_sigma: float = 1.0  # lognormal σ (std-dev of the log); smaller → less spread
 
     # ── Diagnosis ────────────────────────────────────────────────────────────
-    diagnosis_probability: float = 1.0  # P(failure triggers a repair attempt on any server)
+    diagnosis_probability: float = 0.8  # P(failure triggers a repair attempt on any server)
     diagnosis_uncertainty: float = 0.0  # P(wrong server identified | failure diagnosed)
 
     # ── Bad-server regeneration ──────────────────────────────────────────────
     bad_server_regeneration: bool = False  # whether bad servers regenerate over time
     bad_server_regen_interval: float = 30 * 24 * 60  # interval in minutes (30 days)
+    # Each interval, int(good × systematic_failure_fraction × scale) good servers
+    # (at least one) become bad.  The paper does not specify a regeneration rate.
+    bad_server_regen_scale: float = 0.1
 
     # ── Simulation control ──────────────────────────────────────────────────
     seed: int = 42
@@ -122,6 +128,8 @@ class Params:
             raise ValueError(
                 "max_replications must be >= num_replications"
             )
+        if self.bad_server_regen_scale < 0:
+            raise ValueError("bad_server_regen_scale must be >= 0")
         if self.rack_size <= 0:
             raise ValueError("rack_size must be > 0")
 

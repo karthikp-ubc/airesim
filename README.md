@@ -24,8 +24,9 @@ python -m airesim.run examples/paper_table1_sweep.py
 pytest tests/
 ```
 
-128 tests across 10 test modules, all passing (1 skipped by default — a slower
-full-equivalence check enabled with `AIRESIM_FULL_EQUIVALENCE=1`).
+146 tests across 11 test modules, all passing (2 skipped by default — a slower
+full-equivalence check enabled with `AIRESIM_FULL_EQUIVALENCE=1`, and the Weibull golden
+case, which age-aware failure sampling deliberately changed).
 
 ## Linting
 
@@ -46,10 +47,11 @@ Both `pytest` and `ruff check` run automatically on every push and pull request 
 | `tests/test_airesim.py` | 23 | Core params, server state machine, coordinator, pool, scheduler, full simulation, sweeps, failure distributions |
 | `tests/test_scored_removal.py` | 24 | `ScoredRemoval` score arithmetic, retirement thresholds, snapshot, integration |
 | `tests/test_diagnosis_probability.py` | 18 | `diagnosis_probability` and `diagnosis_uncertainty` parameter validation and simulation behaviour; floating-server and duplication bug regressions |
+| `tests/test_paper_conformance.py` | 18 | Paper-conformance fixes: stall only below `job_size`, depletion guard, `diagnosis_probability` default 0.8, returning borrowed spares, age-aware Weibull/lognormal sampling, regeneration scale, `OneWaySweep` paper form |
 | `tests/test_scheduling_policies.py` | 14 | `DefaultHostSelection` full-pool sampling, `HighestScoreFirst` ordering, untracked servers, reset, integration with `ScoredRemoval` |
 | `tests/test_repair_escalation_policy.py` | 14 | `RepairEscalationPolicy` is actually consulted (not recomputed inline); `DefaultRepairEscalation` vs. `EscalateOnDetectedFailure` semantics; auto-repair-outcome contract |
 | `tests/test_topology.py` | 13 | Rack assignment (`assign_racks`), `PackedByRackFirst` packing/spanning, `enable_topology` on/off integration |
-| `tests/test_prefix_equivalence.py` | 8 | Default escalation policy reproduces the pre-`8896140` simulator bit-for-bit, against golden values in `tests/data/prefix_golden.json` |
+| `tests/test_prefix_equivalence.py` | 8 | Default escalation policy reproduces the pre-`8896140` simulator bit-for-bit, against golden values in `tests/data/prefix_golden.json` (with later, deliberate behaviour changes neutralised — see `tests/prefix_cases.py`) |
 | `tests/test_attributed_failures.py` | 6 | `attributed_failure_count` vs. ground-truth `total_failure_count` under misattribution; `FewestAttributedFailuresFirst` |
 | `tests/test_edge_cases.py` | 5 | Race-condition fixes: warm-standby callback, misdiagnosis double-submit, missed-signal event |
 | `tests/test_bad_server_repairs.py` | 3 | Repair counters: cures (bad → good) vs. silent failures; only consequential for servers that were actually bad |
@@ -81,7 +83,7 @@ airesim/                    # source package
 ├── run.py                  # CLI entry point  (python -m airesim.run)
 └── __init__.py
 
-tests/                       # 128 tests, 10 modules (per-file breakdown in the table above)
+tests/                       # 146 tests, 11 modules (per-file breakdown in the table above)
 ├── test_airesim.py
 ├── test_scored_removal.py
 ├── test_diagnosis_probability.py
@@ -92,6 +94,7 @@ tests/                       # 128 tests, 10 modules (per-file breakdown in the 
 ├── test_attributed_failures.py
 ├── test_edge_cases.py
 ├── test_bad_server_repairs.py
+├── test_paper_conformance.py
 ├── prefix_cases.py           # Shared case definitions for the golden-value equivalence check
 ├── generate_prefix_golden.py # Regenerates tests/data/prefix_golden.json from a given commit
 └── data/prefix_golden.json   # Golden values: pre-8896140 simulator output, bit-for-bit

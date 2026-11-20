@@ -20,9 +20,14 @@ class PoolManager:
         self.working_pool: list[Server] = []
         self.spare_pool: list[Server] = []
         self.retired: list[Server] = []
+        # Spare-pool servers preempted into the working pool and not yet given
+        # back.  A list (not a set) so iteration order -- and hence which server
+        # is released first -- is deterministic for a given seed.
+        self.borrowed: list[Server] = []
 
         # Counters
         self.preemption_count = 0
+        self.spare_return_count = 0
 
     # ── Initialization ───────────────────────────────────────────────────
 
@@ -70,6 +75,7 @@ class PoolManager:
         server = self.spare_pool.pop(0)
         server.return_from_spare()
         self.working_pool.append(server)
+        self.borrowed.append(server)
         self.preemption_count += 1
         return server
 
@@ -77,8 +83,32 @@ class PoolManager:
         """Return a server from working pool back to spare pool."""
         if server in self.working_pool:
             self.working_pool.remove(server)
+        if server in self.borrowed:
+            self.borrowed.remove(server)
+            self.spare_return_count += 1
         server.move_to_spare()
         self.spare_pool.append(server)
+
+    def release_borrowed(self, keep_available: int, assigned: set[int] | None = None) -> int:
+        """Give idle borrowed servers back to the spare pool once they are not needed.
+
+        A borrowed server is released only while the working pool would still have
+        at least ``keep_available`` idle servers without it, and only if it is not
+        currently assigned to the job (``assigned`` holds ``id()`` of the job's
+        active servers and warm standbys).  Returns the number released.
+        """
+        assigned = assigned or set()
+        available = len(self.available_in_working)
+        released = 0
+        for s in list(self.borrowed):
+            if available <= keep_available:
+                break
+            if (s.state == ServerState.IDLE and id(s) not in assigned
+                    and s in self.working_pool):
+                self.return_to_spare(s)
+                available -= 1
+                released += 1
+        return released
 
     def retire_server(self, server: Server) -> None:
         """Permanently remove a server from the cluster."""
@@ -87,6 +117,8 @@ class PoolManager:
             self.working_pool.remove(server)
         if server in self.spare_pool:
             self.spare_pool.remove(server)
+        if server in self.borrowed:
+            self.borrowed.remove(server)
         self.retired.append(server)
 
     def __repr__(self):

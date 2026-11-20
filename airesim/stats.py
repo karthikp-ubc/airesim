@@ -32,6 +32,7 @@ class StatsCollector:
 
     # Preemptions
     preemption_count: int = 0
+    spare_return_count: int = 0      # borrowed servers given back to the spare pool
 
     # Job metrics
     total_training_time: float = 0.0  # total wall-clock time including all overhead
@@ -103,6 +104,7 @@ class StatsCollector:
             "failed_repairs": self.failed_repairs,
             "servers_retired": self.servers_retired,
             "preemption_count": self.preemption_count,
+            "spare_return_count": self.spare_return_count,
             "host_selection_count": self.host_selection_count,
             "job_stall_count": self.job_stall_count,
             "avg_run_duration_mins": round(self.avg_run_duration, 2),

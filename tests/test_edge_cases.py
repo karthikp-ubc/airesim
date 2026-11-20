@@ -115,11 +115,16 @@ def test_repaired_server_added_to_warm_standbys():
         "Simulator does not wire the repair shop callback to the scheduler"
     )
 
-    # The callback should point at the scheduler's return_server_to_job method
-    assert observed["repair_shop"].on_server_returned == \
-        observed["scheduler"].return_server_to_job, (
-        "Bug (a): on_server_returned is set but does not point to "
-        "scheduler.return_server_to_job"
+    # The callback must hand the server to scheduler.return_server_to_job, i.e.
+    # an idle server is re-added as a warm standby when the job has room.
+    scheduler = observed["scheduler"]
+    scheduler.warm_standbys = []
+    server = Server(server_id=999, env=None, is_bad=False,
+                    random_failure_rate=0.0, systematic_failure_rate=0.0)
+    observed["repair_shop"].on_server_returned(server)
+    assert scheduler.warm_standbys == [server], (
+        "Bug (a): on_server_returned does not re-add the repaired server "
+        "as a warm standby via scheduler.return_server_to_job"
     )
     print("  [PASS] test_repaired_server_added_to_warm_standbys")
 
@@ -153,6 +158,7 @@ def test_misdiagnosis_does_not_double_submit_to_repair():
         prob_auto_to_manual=0.0,     # always auto repair
         auto_repair_fail_prob=0.0,
         manual_repair_fail_prob=0.0,
+        diagnosis_probability=1.0,   # every failure is diagnosed
         diagnosis_uncertainty=1.0,   # always misdiagnose
         seed=7,
     )

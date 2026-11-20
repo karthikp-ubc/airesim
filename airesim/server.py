@@ -65,6 +65,11 @@ class Server:
         self.systematic_failure_count = 0
         self.failure_timestamps: list[float] = []
         self.was_systematic: bool = False  # whether last failure was systematic
+        # Job-running time accumulated since the server was last renewed (put into
+        # service or repaired).  Used by non-exponential failure distributions so a
+        # server's hazard depends on its age rather than restarting at every job
+        # restart; irrelevant for the (memoryless) exponential.
+        self.age: float = 0.0
 
     # ── Properties ───────────────────────────────────────────────────────
 
@@ -98,9 +103,13 @@ class Server:
         self.state = ServerState.MANUAL_REPAIR
 
     def complete_repair(self, success: bool) -> None:
-        """Complete repair.  If success and was bad, server becomes good."""
+        """Complete repair.  If success and was bad, server becomes good.
+
+        Completing a repair renews the server, so its age restarts at zero.
+        """
         if success and self.is_bad:
             self.is_bad = False
+        self.age = 0.0
         self.state = ServerState.IDLE
 
     def retire(self) -> None:

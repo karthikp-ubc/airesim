@@ -125,8 +125,16 @@ class Simulator:
             stats=stats,
         )
         # Wire the repair shop to the scheduler so repaired servers are
-        # offered back as warm standbys mid-job (fix for bug a).
-        repair_shop.on_server_returned = scheduler.return_server_to_job
+        # offered back as warm standbys mid-job (fix for bug a).  Once the
+        # server is placed, borrowed spare-pool servers the job no longer needs
+        # are given back to the spare pool (paper §II-B).
+        def _on_server_returned(server: Server) -> None:
+            scheduler.return_server_to_job(server)
+            if p.return_borrowed_spares:
+                assigned = {id(s) for s in scheduler.all_assigned}
+                pool_mgr.release_borrowed(p.total_servers_needed, assigned)
+
+        repair_shop.on_server_returned = _on_server_returned
 
         # ── Start the main simulation process ────────────────────────────
         env.process(self._main_loop(
@@ -141,6 +149,7 @@ class Simulator:
         env.run()
 
         stats.preemption_count = pool_mgr.preemption_count
+        stats.spare_return_count = pool_mgr.spare_return_count
         return stats
 
     def _main_loop(
@@ -160,15 +169,24 @@ class Simulator:
 
         while remaining_job_time > 0:
             # ── Host Selection ───────────────────────────────────────────
+            # The job is being re-hosted, so nothing is assigned: give back any
+            # borrowed spare-pool servers the working pool can do without.
+            if p.return_borrowed_spares:
+                pool_mgr.release_borrowed(p.total_servers_needed)
             success = scheduler.do_host_selection()
 
             if not success:
-                # Not enough servers — try pulling from spare pool
+                # Fewer than job_size idle servers.  Preempt spare-pool servers to
+                # restore the full complement (job + warm standbys); stall for
+                # repairs only while the job cannot run at all, i.e. with the
+                # spare pool exhausted and fewer than job_size servers idle.
                 while len(pool_mgr.available_in_working) < p.total_servers_needed:
                     if pool_mgr.spare_pool:
                         yield env.timeout(p.preemption_wait_time)
                         stats.total_wait_time += p.preemption_wait_time
                         pool_mgr.move_spare_to_working()
+                    elif len(pool_mgr.available_in_working) >= p.job_size:
+                        break  # enough to run; start with fewer warm standbys
                     else:
                         # No spares — stall and wait for repair.
                         # Check triggered before yielding to avoid the missed-
@@ -180,13 +198,13 @@ class Simulator:
                         stats.job_stall_count += 1
 
                         # Depletion guard: if server retirements have permanently
-                        # reduced the total non-retired pool below the minimum
-                        # needed, no amount of waiting will unblock the job.
+                        # reduced the total non-retired pool below job_size, no
+                        # amount of waiting will unblock the job.
                         total_active = sum(
                             1 for s in all_servers
                             if s.state != ServerState.RETIRED
                         )
-                        if total_active < p.total_servers_needed:
+                        if total_active < p.job_size:
                             stats.cluster_depleted = True
                             stats.total_training_time = env.now
                             return  # exit the SimPy generator
@@ -327,7 +345,9 @@ class Simulator:
             ]
             if good_servers:
                 num_to_convert = max(
-                    1, int(len(good_servers) * p.systematic_failure_fraction * 0.1)
+                    1,
+                    int(len(good_servers) * p.systematic_failure_fraction
+                        * p.bad_server_regen_scale),
                 )
                 for s in rng.sample(good_servers, min(num_to_convert, len(good_servers))):
                     s.make_bad()

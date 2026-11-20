@@ -4,6 +4,78 @@ All notable changes to AIReSim are recorded here.
 
 ---
 
+## [Unreleased] — 2026-11-20
+
+### Paper conformance (arXiv 2603.07041v3)
+
+A pass comparing the implementation against the paper found the following; each is
+fixed here and covered by `tests/test_paper_conformance.py`.
+
+#### Fixed: job stalled with enough servers to run
+
+**Affected:** `airesim/simulator.py` (`_main_loop` stall loop and depletion guard)
+
+`Scheduler.do_host_selection` succeeds with `job_size` idle servers, but once it failed,
+the retry loop kept the job stalled until `job_size + warm_standbys` were idle, so with
+the spare pool exhausted the job waited for repairs it did not need. The paper stalls
+only "in the hypothetical event we run out of servers in both the working and spare
+pools". In a small reproduction (`job_size=10`, `warm_standbys=4`, no spare pool), 120
+of 150 stall waits happened with ≥ 10 servers idle. The depletion guard used the same
+threshold, so a run could be aborted as `cluster_depleted` while it could still run.
+Both thresholds are now `job_size`. Spare-pool preemption still refills the full
+complement. At the paper defaults (config.yaml, seeds 42–71) this path is never hit:
+all 60 golden runs are unchanged by it.
+
+#### Changed: `diagnosis_probability` defaults to 0.8 (Table I)
+
+**Affected:** `airesim/params.py`, `config.yaml`, docs
+
+The default was 1.0; Table I lists 0.8. Scripts that do not set it explicitly now
+run with 20% of failures undiagnosed (the failed server rejoins without repair).
+
+#### New: borrowed spare-pool servers are returned (`return_borrowed_spares`, default on)
+
+**Affected:** `airesim/pool.py`, `airesim/simulator.py`, `airesim/stats.py`
+
+The paper (§II-B) returns spare-pool servers "when the need for additional servers for
+the AI job subsides"; previously a preempted server stayed in the working pool forever
+(`PoolManager.return_to_spare` was never called). Borrowed servers are now released,
+idle and unassigned, whenever the working pool could re-host the whole job without
+them (checked before each host selection and when a repaired server returns). Each
+re-borrow pays `preemption_wait_time` again. New stat `spare_return_count`. Set
+`return_borrowed_spares=False` for the previous behaviour.
+
+#### Fixed: Weibull / lognormal ages reset at every job restart
+
+**Affected:** `airesim/coordinator.py`, `airesim/server.py`
+
+Every run segment redrew every server's time-to-failure from age zero, so after any
+failure anywhere in the job all servers were "as good as new" -- wear-out (Weibull
+k > 1) was largely cancelled. Servers now carry an `age` (job-running time since last
+repair) and the coordinator samples the residual life conditioned on that age;
+completing a repair resets it. Exponential runs are unaffected (memoryless).
+
+#### Other
+
+- `bad_server_regen_scale` (default 0.1) replaces the hardcoded factor in
+  bad-server regeneration; behaviour unchanged at the default.
+- `OneWaySweep` accepts the paper's `OneWaySweep(label, param_name, values)` form;
+  the label is used as the sweep name.
+- `examples/paper_table1_sweep.py` now covers all 14 Table I parameters (random
+  failure rate, systematic multiplier, spare pool size and diagnosis probability were
+  missing), sets `diagnosis_probability=0.8`, runs in parallel and writes CSVs and
+  Figure 2.
+- `tests/prefix_cases.py`: the golden-value equivalence check pins
+  `diagnosis_probability=1.0` (the default when the goldens were made), switches off
+  `return_borrowed_spares` for the config.yaml runs, and skips the `weibull` case,
+  which age-aware sampling deliberately changes.
+
+Not code issues, noted for the paper: Figure 1 loops a failed repair back into repair,
+whereas the text (assumption 5, input 10) reintegrates the server still bad, which is
+what the simulator does; and the implementation is now ~2 900 lines, not ~2 700.
+
+---
+
 ## [Unreleased] — 2026-09-22
 
 ### Correction

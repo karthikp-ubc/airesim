@@ -3,6 +3,16 @@
 Used by tests/generate_prefix_golden.py (run against a checkout of the commit
 *before* 8896140) and tests/test_prefix_equivalence.py (run against the current
 tree).  airesim is imported lazily so the generator can point at either tree.
+
+Later behaviour changes that the golden values predate are neutralised here so the
+comparison keeps checking what it was built for (RNG order of the escalation draw):
+
+- ``diagnosis_probability`` defaulted to 1.0 when the goldens were made (now 0.8),
+  so the small cases pin it to 1.0.
+- Returning borrowed spare-pool servers (``return_borrowed_spares``) is switched off
+  for the config.yaml runs; with it off they match the goldens exactly.
+- The ``weibull`` case is listed in ``DIVERGENT_SMALL_CASES``: non-exponential failure
+  sampling is now age-aware, so it intentionally no longer matches.
 """
 
 from __future__ import annotations
@@ -30,6 +40,7 @@ _SMALL_BASE = dict(
     recovery_time=5, host_selection_time=1, preemption_wait_time=5,
     auto_repair_time=30, manual_repair_time=120,
     prob_auto_to_manual=0.5, auto_repair_fail_prob=0.3, manual_repair_fail_prob=0.3,
+    diagnosis_probability=1.0,  # the pre-0.8 default the goldens were generated with
     num_replications=1,
 )
 
@@ -45,6 +56,11 @@ SMALL_CASES = {
 }
 SMALL_SEEDS = [1, 2, 3, 4, 5]
 
+# Cases whose behaviour was deliberately changed after the goldens were generated.
+DIVERGENT_SMALL_CASES = {
+    "weibull": "failure sampling is age-aware since the paper-conformance fixes",
+}
+
 
 def _summarize(stats) -> dict:
     return {f: (repr(getattr(stats, f)) if f == "training_time_hours"
@@ -56,7 +72,11 @@ def run_default(prob: float, seed: int) -> dict:
     from airesim.run import _load_params
     from airesim.simulator import Simulator
 
-    params = _load_params(CONFIG).with_overrides(diagnosis_probability=prob)
+    params = _load_params(CONFIG)
+    overrides = {"diagnosis_probability": prob}
+    if hasattr(params, "return_borrowed_spares"):  # absent in the pre-fix tree
+        overrides["return_borrowed_spares"] = False
+    params = params.with_overrides(**overrides)
     return _summarize(Simulator(params=params, seed=seed).run())
 
 

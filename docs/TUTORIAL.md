@@ -62,13 +62,16 @@ print(json.dumps(stats.summary_dict(), indent=2))
 | `warm_standbys` | 16 | Hot-spare servers kept ready for instant swap |
 | `working_pool_size` | 4160 | Total servers in the working pool |
 | `spare_pool_size` | 200 | Cold spares (preemption required to use) |
+| `preemption_wait_time` | 20 min | Time to preempt one spare-pool server into the working pool |
+| `return_borrowed_spares` | True | Give preempted servers back to the spare pool once the job no longer needs them |
 | `random_failure_rate` | ~6.9e-6 / min | Per-server random failure rate (MTBF ≈ 100 days) |
 | `recovery_time` | 20 min | Time to reload checkpoint after a failure |
-| `diagnosis_probability` | 1.0 | P(failure triggers a repair attempt on any server) |
+| `diagnosis_probability` | 0.8 | P(failure triggers a repair attempt on any server); paper Table I default |
 | `diagnosis_uncertainty` | 0.0 | P(wrong server blamed \| failure diagnosed) |
 | `failure_distribution` | `'exponential'` | TTF distribution: `'exponential'`, `'weibull'`, or `'lognormal'` (see §11) |
 | `bad_server_regeneration` | False | Periodically convert good servers to bad (hardware aging) |
 | `bad_server_regen_interval` | 43 200 min | Interval between aging events (default 30 days) |
+| `bad_server_regen_scale` | 0.1 | Scales how many good servers turn bad per aging event |
 | `adaptive_replications` | False | Enable automatic run-count selection (see §8) |
 | `confidence_level` | 0.95 | CI confidence level for adaptive stopping criterion |
 | `relative_accuracy` | 0.05 | Target half-width as fraction of mean (e.g. 0.05 = ±5%) |
@@ -100,8 +103,10 @@ stats = sim.run()
 print(f"Training time: {stats.training_time_hours:.1f} hrs")
 ```
 
-Every `bad_server_regen_interval` minutes the simulator converts roughly
-`systematic_failure_fraction × 10%` of the surviving good servers to bad.
+Every `bad_server_regen_interval` minutes the simulator converts
+`int(good × systematic_failure_fraction × bad_server_regen_scale)` of the surviving
+good servers to bad (at least one); with the default scale of 0.1 that is roughly
+`systematic_failure_fraction × 10%`.
 Training jobs that run for many months will therefore see a gradually rising
 failure rate over time.  Leave `bad_server_regeneration=False` (the default)
 when modelling a fixed hardware population.
@@ -943,6 +948,8 @@ fair: you can swap distributions without changing the average failure frequency.
   no memory of past uptime (the most common model for large-scale server fleets).
 - **Weibull with k > 1** models wear-out: servers that have been running longer
   are more likely to fail.  `k ≈ 2–3` is typical for mechanical components.
+  A server's age is its job-running time since it was last repaired; it carries
+  across job restarts and resets to zero only when the server completes a repair.
 - **Weibull with k < 1** models infant mortality: early failures are more common
   and the hazard rate decreases over time.
 - **Lognormal** produces occasional very-long inter-failure intervals interspersed

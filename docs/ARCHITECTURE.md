@@ -68,7 +68,7 @@ All five fields are validated by `validate()` and loadable from a YAML or JSON p
 
 | Parameter | Meaning |
 |-----------|---------|
-| `diagnosis_probability` | P(failure triggers a repair attempt on *any* server). At 0 the failed server auto-recovers instantly; no server enters the repair pipeline. |
+| `diagnosis_probability` | P(failure triggers a repair attempt on *any* server). Default `0.8` (paper Table I). At 0 the failed server auto-recovers instantly; no server enters the repair pipeline. |
 | `diagnosis_uncertainty` | P(wrong server blamed \| failure diagnosed). At 1 every repair is sent to a randomly chosen innocent server while the actual bad server escapes. |
 
 Both are validated in `[0, 1]` by `validate()`.
@@ -93,7 +93,15 @@ Both are validated in `[0, 1]` by `validate()`.
 | Parameter | Default | Meaning |
 |-----------|---------|---------|
 | `bad_server_regeneration` | `False` | If `True`, periodically convert good servers to bad to model aging or hardware replacement |
-| `bad_server_regen_interval` | `43 200` (30 days) | Minutes between aging events; each event converts ≈ `systematic_failure_fraction × 10%` of surviving good servers |
+| `bad_server_regen_interval` | `43 200` (30 days) | Minutes between aging events |
+| `bad_server_regen_scale` | `0.1` | Each event converts `int(good × systematic_failure_fraction × scale)` surviving good servers (at least one). The paper leaves the rate unspecified. |
+
+**Spare-pool parameters:**
+
+| Parameter | Default | Meaning |
+|-----------|---------|---------|
+| `preemption_wait_time` | `20` | Minutes to preempt one spare-pool server into the working pool (paid per server) |
+| `return_borrowed_spares` | `True` | Give borrowed spare-pool servers back once the working pool could re-host the whole job (`job_size + warm_standbys`) without them (paper §II-B) |
 
 **Design decisions:**
 
@@ -151,6 +159,14 @@ pool** (servers that are available or assigned to the job) and the **spare pool*
 - *Spare pool preemption* (`move_spare_to_working`) increments a
   `preemption_count` counter so the main loop can copy it into `StatsCollector` at
   the end of the run.
+- *Borrowed servers go back.* Preempted servers are tracked in `borrowed` (a list,
+  so release order is deterministic).  `release_borrowed(keep_available, assigned)`
+  returns idle, unassigned borrowed servers to the spare pool while the working pool
+  would still have at least `keep_available` idle servers without them.  The
+  simulator calls it before each host selection and whenever a repaired server is
+  returned mid-job (when `return_borrowed_spares` is set); returns are counted in
+  `spare_return_count`.  This models the paper's "when the need for additional
+  servers for the AI job subsides, these servers are returned to the spare pool".
 
 ---
 
@@ -167,11 +183,18 @@ and the remaining job time, it samples the next failure event and returns `(fail
   chosen proportionally to its rate using a single extra uniform sample.  This
   reduces N SimPy processes and an `AnyOf` event to two RNG calls — a major
   performance win for clusters of thousands of nodes.
-- *Per-server sampling for Weibull and lognormal.*
+- *Per-server, age-aware sampling for Weibull and lognormal.*
   These distributions don't have an analytic aggregate-minimum shortcut, so the
-  coordinator samples a TTF for every server and takes the minimum directly (O(N)
-  calls).  This is still fast because the expensive part of the original N-process
-  design was SimPy process overhead, not sampling cost.
+  coordinator samples a residual life for every server and takes the minimum
+  directly (O(N) calls).  This is still fast because the expensive part of the
+  original N-process design was SimPy process overhead, not sampling cost.
+  Each server carries an `age` — job-running time since it was last renewed — and
+  the residual life is sampled from the distribution *conditioned on surviving to
+  that age* (inverse of S(age + t) / S(age)).  Every server in a run segment ages by
+  the segment's length; completing a repair resets the age to zero.  Before this,
+  every server's TTF was redrawn from age zero at every job restart, which silently
+  turned wear-out (Weibull k > 1) into "as good as new after any failure anywhere".
+  For the exponential the age is irrelevant (memoryless).
 - *Mean-matching.* Weibull and lognormal parameters are derived so that the mean
   TTF equals `1 / failure_rate`, matching the exponential baseline.  This lets you
   compare distributions without changing the average failure frequency.
@@ -250,10 +273,17 @@ then drives `simpy.Environment.run()` through a single `_main_loop` process.
 - *Seed threading.* The `Simulator` receives an explicit `seed` parameter (separate
   from `params.seed`) so that sweep replications can use `base_params.seed + rep`
   without modifying the shared `Params` object.
-- *Stall-wait pattern.* When no servers are available from either the working or
-  spare pool, the main loop yields on `repair_shop.server_repaired_event` (the
-  missed-signal-safe version described above), then loops to re-check availability.
-  This avoids busy-waiting (`yield env.timeout(1)`) in the common case.
+- *Stall-wait pattern.* Host selection succeeds whenever at least `job_size`
+  servers are idle (with however many warm standbys remain).  Below that, the main
+  loop preempts spare-pool servers until the full complement (`job_size +
+  warm_standbys`) is restored.  Only when the spare pool is exhausted *and* fewer
+  than `job_size` servers are idle does it stall, yielding on
+  `repair_shop.server_repaired_event` (the missed-signal-safe version described
+  above), then looping to re-check availability.  It stops stalling as soon as
+  `job_size` servers are idle; it does not wait for warm standbys to be refilled.
+  The depletion guard likewise aborts only when fewer than `job_size` non-retired
+  servers remain.  (Before this fix both thresholds were `job_size +
+  warm_standbys`, so the job could sit stalled with enough servers to run.)
 - *`_bad_server_regen` optional process.* If `bad_server_regeneration` is enabled,
   a background process periodically converts some good servers to bad, modelling
   hardware aging or batch deployments of lower-quality nodes.
