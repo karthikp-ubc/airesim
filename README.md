@@ -107,6 +107,7 @@ examples/
 ├── simulation_report_stats.py  # Stats behind docs/SIMULATION_REPORT.md: adaptive replication on config.yaml
 ├── job_length_sweep.py         # Systematic-vs-random failure counts across job lengths, at paper defaults
 ├── diagnosis_sweep.py          # diagnosis_probability/diagnosis_uncertainty × scheduling/retirement, payoff regime
+├── diagnosis_crossover.py      # Where retirement stops beating failure-aware scheduling as diagnosis degrades
 ├── diagnosis_realistic_sweep.py   # Does diagnosis_uncertainty matter at Table I defaults? (feeds the report below)
 ├── diagnosis_realistic_report.py  # Builds docs/DIAGNOSIS_REALISTIC_REPORT.md from that sweep's results.csv
 ├── scheduling_comparison.py    # 3×3 scheduling × retirement policy comparison, payoff regime
@@ -128,7 +129,7 @@ docs/
 ├── SCHEDULING_COMPARISON_REPORT.md  # Scheduling × retirement 3×3 experiment, payoff regime
 ├── 2D-HEAT_MAP_REPORT.md       # Two-way heatmap sweep results, payoff regime
 ├── THRESHOLD_SENSITIVITY_REPORT.md  # ThresholdRemoval crossover analysis
-├── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality × scheduling/retirement, payoff regime
+├── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality × scheduling/retirement, payoff regime (+ crossover, §6)
 └── POLICY_SYNTHESIS_REPORT.md  # Synthesis of all reports above + deployment recommendations
 
 config.yaml                     # Ready-to-use params file (Table I defaults + adaptive settings)

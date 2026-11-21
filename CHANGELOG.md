@@ -85,15 +85,40 @@ completing a repair resets it. Exponential runs are unaffected (memoryless).
   390 → 338 retired, +6.9%). Experiments that set diagnosis explicitly
   (diagnosis_sweep, diagnosis_realistic) are unchanged.
 - **Policy ranking changes under the 0.8 default.** In the 2D heat map,
-  FewestFailuresFirst+NeverRemove is now best in 21 of 25 cells; before, Random+
-  ScoredRemoval was best in most. The docs/*_REPORT.md files other than
-  DIAGNOSIS_REALISTIC_REPORT.md still quote the diagnosis = 1.0 numbers.
+  FewestFailuresFirst+NeverRemove now has the lowest mean in 24 of 25 cells (16
+  significantly ahead of Random+ScoredRemoval); at diagnosis 1.0 the split was 13–12.
+  (An earlier version of this entry said 21 of 25, and that ScoredRemoval had won
+  most cells before; both were misread from a ranking diff.) Part of this is an
+  information asymmetry: FewestFailuresFirst counts undiagnosed failures, while
+  ScoredRemoval's score and every removal decision see only diagnosed ones. See
+  `examples/diagnosis_crossover.py` and DIAGNOSIS_SWEEP_REPORT.md §6 for the
+  comparison against FewestAttributedFailuresFirst.
 - **Table I / Figure 2 conclusions unchanged.** Training time is dominated by the
   random failure rate (max/min 2.9× over its range) and recovery time (1.47×); every other
   parameter moves it by ≤ 2%, preemption wait time and working-pool size by ≤ 0.3%,
   before and after. The pre-fix baseline is in
   `examples/paper_table1_figures/before_fixes/` (master 63c1900 with this script,
   `--base-diagnosis-probability 1.0`).
+
+#### New: `examples/diagnosis_crossover.py`; reports regenerated
+
+- **Diagnosis crossover sweep** (DIAGNOSIS_SWEEP_REPORT.md §6, 5,040 runs, 30 paired
+  seeds): diagnosis probability 0.5–1.0 × seven policies in three payoff-regime cells.
+  `Random + ScoredRemoval` beats `FewestAttributedFailuresFirst + NeverRemove` only above
+  diagnosis 0.91 / 0.81 / 0.59 (15×/75%, 20×/75%, 25×/90%). Scheduling keeps 84–107%
+  of its value as diagnosis falls to 0.5, retirement 46–74%. Scheduling + ScoredRemoval
+  is the fastest realistic policy at every diagnosis level.
+- **Reports updated with the rerun numbers:** 2D-HEAT_MAP, SCHEDULING_COMPARISON,
+  RETIREMENT_POLICY, THRESHOLD_SENSITIVITY, SIMULATION, POLICY_SYNTHESIS, FINDINGS
+  (DIAGNOSIS_REALISTIC is generated; DIAGNOSIS_SWEEP's data was unchanged, so it gets a
+  provenance note plus §6). Changed conclusions: `HighestScoreFirst` no longer matches
+  `FewestFailuresFirst` below diagnosis 1.0 (its scores see only diagnosed failures);
+  scheduling + ScoredRemoval now clearly beats ScoredRemoval alone; ScoredRemoval's lead
+  over ThresholdRemoval is no longer significant at the mildest settings; the ceiling on
+  any node-management policy at Table I defaults rises from 2.3% to 2.9%.
+  ARCHITECTURE.md and TUTORIAL.md now qualify the `HighestScoreFirst` ≡
+  `FewestFailuresFirst` equivalence. Not rerun, so their figures predate this change:
+  `scored_sweep.py`, `retirement_sweep.py`, `stress_scenario.py`.
 
 Not code issues, noted for the paper: Figure 1 loops a failed repair back into repair,
 whereas the text (assumption 5, input 10) reintegrates the server still bad, which is

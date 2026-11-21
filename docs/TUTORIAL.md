@@ -325,7 +325,10 @@ stats = sim.run()
 > **Note:** At large cluster scale with short job chunks (mean chunk ≪ `time_period`),
 > `HighestScoreFirst` and `FewestFailuresFirst` produce identical server orderings
 > because no uptime credits are ever awarded and score reduces to a linear function
-> of failure count.
+> of failure count — provided diagnosis is perfect. The score counts only diagnosed,
+> attributed failures, while `FewestFailuresFirst` counts every failure, so at the
+> default `diagnosis_probability = 0.8` the two differ (`HighestScoreFirst` then
+> behaves like `FewestAttributedFailuresFirst`).
 
 `PackedByRackFirst` models a **hierarchical cluster** (racks as a failure/locality
 domain) rather than a fully flat pool. It requires `Params.enable_topology=True`,

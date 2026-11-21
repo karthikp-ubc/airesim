@@ -361,7 +361,11 @@ these names for backward compatibility.
   are much shorter than `time_period` (e.g. 7-minute chunks vs. 1-day periods), no
   credits are ever awarded, and score = `initial − penalty × failures` — a strictly
   decreasing linear function of failure count, identical to `FewestFailuresFirst`'s
-  ordering.
+  ordering *when diagnosis is perfect*. The score only moves on failures reported
+  through `on_failure` (diagnosed, attributed ones), whereas `FewestFailuresFirst`
+  reads `total_failure_count` (every failure). With `diagnosis_probability < 1` or
+  `diagnosis_uncertainty > 0`, `HighestScoreFirst` instead behaves like
+  `FewestAttributedFailuresFirst`.
 - *`PackedByRackFirst` is a greedy heuristic, not an optimal bin-cover.* Sorting
   racks by descending available-server count and filling largest-first tends to
   minimize the number of racks spanned, but isn't guaranteed optimal for every

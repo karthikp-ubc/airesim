@@ -11,6 +11,16 @@
 `prob_auto_to_manual` is the probability that auto repair escalates, independent of the
 silent auto-repair failure `auto_repair_fail_prob`. Date: 2026-09-21.
 
+> **Rerun 2026-11-20 at `be13c89`** (after the paper-conformance fixes, CHANGELOG;
+> per-run rows now in `replications.csv`). This script sets both diagnosis parameters
+> explicitly, so the change of default doesn't affect it, and the rerun reproduces 71 of
+> the 72 cells exactly. The exception is Random + ScoredRemoval at uncertainty 1.0
+> (3,287.7 → 3,308.8 h, +0.6%): retiring innocent servers drains the working pool there
+> (171 spare-pool preemptions per run), and borrowed spares are now returned and
+> re-borrowed at `preemption_wait_time` each. The tables below keep the original numbers.
+> §6 adds a finer, 30-replication sweep of where retirement stops beating scheduling,
+> including the realistic-information scheduler `FewestAttributedFailuresFirst`.
+
 Figures: `examples/diagnosis_sweep_figures/`
 
 > **Note:** Sweep B depends on two fixes to the misdiagnosis path in `simulator.py`:
@@ -337,3 +347,109 @@ net-harmful at `diagnosis_uncertainty = 1.0`, and from about 0.6 upward
 `ThresholdRemoval` matches or beats it. If `diagnosis_uncertainty` can reach 1.0, drop
 `ScoredRemoval` and rely on FewestFailures scheduling alone; at that point no retirement
 policy produces a net benefit and the priority is accurate diagnosis, not smarter retirement.
+
+---
+
+## 6  Crossover: where retirement stops beating failure-aware scheduling
+
+**Data:** `examples/diagnosis_crossover_figures/` (`replications.csv`, 5,040 runs;
+`results.csv`, `contrasts.csv`, `crossover.csv`, `crossover_report.md`, `crossover.png`),
+produced by `examples/diagnosis_crossover.py` at commit `9e642d0` (run log:
+`examples/diagnosis_crossover_figures/run.log`). Date: 2026-11-20.
+
+**Why this sweep.** At diagnosis 1.0, `Random + ScoredRemoval(SC_fast)` and
+`FewestFailuresFirst + NeverRemove` split the 2-D heat map 12–13; at the Table I default of
+0.8, `FewestFailuresFirst` wins 24 of 25 cells (`2D-HEAT_MAP_REPORT.md`). Part of that is
+an information asymmetry: `FewestFailuresFirst` counts every failure, including the ones
+diagnosis misses, while `ScoredRemoval`'s score only moves on diagnosed failures and every
+removal decision is taken when a server finishes repair, i.e. after a diagnosed failure.
+This sweep adds `FewestAttributedFailuresFirst` (FAFF), which ranks servers by diagnosed
+failures only — the information an operator relying on diagnosis actually has — and uses
+it as the fair comparison.
+
+**Setup.** The heat map's payoff regime (4,600-server pool, 14-day job, 2× random failure
+rate, 8% bad servers, 60-min recovery, auto-repair fail 0.6, `diagnosis_uncertainty = 0`),
+in three cells where `SC_fast` beat `FewestFailuresFirst` at diagnosis 1.0: 15×/75%,
+20×/75% and 25×/90% (multiplier / manual repair fail probability).
+`diagnosis_probability` ∈ {0.5, 0.6, 0.7, 0.8, 0.85, 0.9, 0.95, 1.0}; seven policies; 30
+replications per cell with seeds 42–71 shared across cells, so every contrast below is
+paired by seed (± is the 95% CI).
+
+![Training time and paired contrast vs diagnosis probability](../examples/diagnosis_crossover_figures/crossover.png)
+
+### 6.1  Where retirement stops winning
+
+Diagnosis probability at which `Random + ScoredRemoval` and the scheduling policy are
+equally fast (linear interpolation of the paired mean contrast; retirement is faster above
+it):
+
+| Regime | vs FAFF + NeverRemove (realistic information) | vs FewestFailuresFirst + NeverRemove (ground-truth counts) |
+|---|---|---|
+| 15×, 75% | **0.91** (retirement significantly better only at 1.0; significantly worse at ≤ 0.8) | 0.93 |
+| 20×, 75% | **0.81** (better from 0.85; worse at ≤ 0.6) | 0.87 |
+| 25×, 90% | **0.59** (better from 0.7; worse at 0.5) | 0.74 |
+
+- **The crossover moves down as bad servers get worse.** The more there is for retirement
+  to remove, the more missed diagnoses it can absorb before scheduling overtakes it.
+- **At the Table I default of 0.8** (Δ = `Random + ScoredRemoval` − `FAFF + NeverRemove`):
+  scheduling is ahead at 15× (+33 ± 20 h), they are tied at 20× (+9 ± 22 h), and
+  retirement is ahead at 25×/90% (−104 ± 22 h).
+- **The information asymmetry shifts the crossover by 0.02–0.15** (compare the two
+  columns). The heat map's flip at diagnosis 0.8 is therefore partly real and partly
+  oracle information.
+
+### 6.2  Why: ranking survives missed diagnoses, thresholds don't
+
+The value of each lever against `Random + NeverRemove`, as diagnosis falls from 1.0 to 0.5:
+
+| Regime | Attributed-count scheduling (FAFF) | Retirement (`SC_fast`) |
+|---|---|---|
+| 15×, 75% | 203 → 170 h (−16%) | 242 → 111 h (−54%) |
+| 20×, 75% | 264 → 258 h (−2%) | 324 → 202 h (−38%) |
+| 25×, 90% | 532 → 569 h (+7%) | 666 → 492 h (−26%) |
+
+Scheduling keeps nearly all of its value even when half of all failures go unobserved;
+retirement loses a quarter to a half of its value. Scheduling only needs bad servers to
+*rank* below good ones, and missing a random 20–50% of failures thins every server's
+count alike, so the ranking survives. Retirement needs an *absolute* threshold — two
+observed failures — and is only checked when a server finishes repair, so each missed
+diagnosis both delays the count and skips a check. `Random + ScoredRemoval` retires 372 →
+192 servers per run at 15× as diagnosis falls from 1.0 to 0.5.
+
+### 6.3  Don't choose — combine
+
+`FAFF + ScoredRemoval` beats `FAFF + NeverRemove` at every diagnosis value in every regime
+(by 26–148 h; every CI excludes zero), and beats `Random + ScoredRemoval` at every value
+below 1.0:
+
+| Regime | FAFF+Scored − Random+Scored at 0.5 | at 0.8 | at 1.0 |
+|---|---|---|---|
+| 15×, 75% | −161 ± 23 h | −69 ± 17 h | +0 ± 20 h |
+| 20×, 75% | −166 ± 27 h | −46 ± 22 h | −11 ± 14 h |
+| 25×, 90% | −216 ± 25 h | −19 ± 18 h | −14 ± 16 h |
+
+It also retires fewer servers (at 0.8: 220 / 266 / 326 against 310 / 337 / 383). Among
+policies an operator could actually run, `FAFF + ScoredRemoval` is the fastest or tied for
+fastest in every one of the 24 (regime, diagnosis) cells (fastest outright in 23; tied
+with `Random + ScoredRemoval` at 15×, diagnosis 1.0). With perfect diagnosis
+scheduling adds little on top of retirement; the worse diagnosis is, the more it adds.
+
+### 6.4  What ground-truth failure counts are worth
+
+`FewestFailuresFirst + ScoredRemoval` (ground-truth counts) is the fastest policy in 21
+of 24 cells. Its lead over the realistic `FAFF + ScoredRemoval` is zero at diagnosis 1.0
+by construction, and grows as diagnosis worsens: 19–60 h at 0.9, 43–103 h at 0.8,
+107–223 h at 0.5. In practice, this is the value of attributing *every* failure to the
+server that caused it, even when the failure can't be diagnosed well enough to send that
+server to repair.
+
+### 6.5  Windowed thresholds don't compete
+
+`Random + Thresh ≥2/7d` is slower than `FAFF + NeverRemove` at every diagnosis value in
+every regime (by 113–335 h).
+
+**Bottom line for this regime:** whether retirement or failure-aware scheduling is the
+better single lever depends on diagnosis quality *and* on how bad the bad servers are —
+retirement wins only above a diagnosis probability of about 0.6–0.9, depending on severity.
+Running both is better than either at every diagnosis level tested, and it is the only
+recommendation that does not depend on knowing the diagnosis probability.

@@ -7,7 +7,8 @@ wins most cells.  This script sweeps diagnosis_probability in three regimes wher
 retirement wins at 1.0 and locates the crossover with paired (same-seed) contrasts.
 
 FewestFailuresFirst ranks by ground-truth failure counts, including failures that went
-undiagnosed, while removal policies only hear about diagnosed failures.  The fair
+undiagnosed, while ScoredRemoval's score moves only on diagnosed failures and every
+removal decision is taken when a server finishes repair (after a diagnosed failure).  The fair
 comparison is therefore against FewestAttributedFailuresFirst (diagnosed failures only);
 both are included, so the gap between them is the value of information diagnosis misses.
 

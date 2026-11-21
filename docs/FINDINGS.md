@@ -28,18 +28,19 @@ terms). There is no other channel.
 
 ## 2. At Table I defaults
 
-`config.yaml` implements the paper's Table I parameters, and repairs follow the DSN'26
-escalation model — auto repair escalates to manual with probability `prob_auto_to_manual`
+`config.yaml` implements the paper's Table I parameters (including
+`diagnosis_probability = 0.8`, so 20% of failures go undiagnosed and the server rejoins the
+pool unrepaired), and repairs follow the DSN'26 escalation model — auto repair escalates to manual with probability `prob_auto_to_manual`
 (0.80), independent of the silent auto-repair failure `auto_repair_fail_prob` (0.40).
 
 With `bad_server_regeneration` off (the default), a bad server can only be cured, never
 created, so the systematic-failure count is capped by the initial bad population
-(~622 of 4,160 servers, 15%) and **saturates early**: 49.4% of the systematic failures a
+(~623 of 4,160 servers, 15%) and **saturates early**: about 40% of the systematic failures a
 256-day run will ever see happen in the first 15 compute-days
 (`SIMULATION_REPORT.md` §5a, `examples/job_length_figures/replications.csv`). That caps
 what *any* node-management policy (retirement, health-aware scheduling) could possibly be
 worth here: eliminating every systematic failure saves at most
-`684.7 × 20 min ≈ 228 h ≈ 2.3%` of the 9,873 h mean training time.
+`862.6 × 20 min ≈ 288 h ≈ 2.9%` of the 9,926 h mean training time.
 
 Measured effects at these defaults stay well inside that ceiling
 (`DIAGNOSIS_REALISTIC_REPORT.md`, `examples/diagnosis_realistic_figures/results.csv`,
@@ -47,11 +48,11 @@ Measured effects at these defaults stay well inside that ceiling
 
 - **Scheduling/retirement policy effect: not significant.** `FewestFailuresFirst`
   vs. `Random` and every `FewestAttributedFailuresFirst` contrast have 95% CIs including
-  zero; a benefit larger than 18 h (0.2%) is excluded.
+  zero; a benefit larger than 26 h (0.3%) is excluded.
 - **Diagnosis-quality effect: significant but small**, within the pre-registered
-  uncertainty range (≤0.2): 0.37%–0.74% depending on the failure-rate multiplier (3×,
-  5×, 10×). Only at `diagnosis_uncertainty = 0.5` — outside that range — does the effect
-  reach ~2.3%.
+  uncertainty range (≤0.2): about 0.4%–0.7% depending on the failure-rate multiplier
+  (3×, 5×, 10×) and policy. Only at `diagnosis_uncertainty = 0.5` — outside that range —
+  does the effect reach 1.3%–2.3%.
 
 ## 3. The persistence regime
 
@@ -62,15 +63,22 @@ regime": elevated failure severity (multiplier up to 30×, swept from 5×), poor
 quality (manual repair fail probability up to 0.90, swept from 0.20), and a shorter job
 than Table I. The job is short enough, and repair poor enough (28% per-attempt success at
 the regime's headline setting, vs. 76% at Table I defaults), that bad servers **persist**
-through it — 26.2% of the initial bad population is still bad at job end, vs. fully cured
-by the end of a Table I run. When bad servers persist:
+through it — 31.8% of the initial bad population is still bad at job end, vs. essentially
+fully cured by the end of a Table I run. When bad servers persist:
 
-- `FewestFailuresFirst` and `ScoredRemoval` are worth **10–20%** of training time (11.4%
-  and 13.2% at the regime's headline setting, up to 19.3% at 90% repair-fail;
+- `FewestFailuresFirst` and `ScoredRemoval` are worth **10–20%** of training time (12.2%
+  and 10.4% at the regime's headline setting, up to about 20% at the most severe settings;
   `SCHEDULING_COMPARISON_REPORT.md`, `RETIREMENT_POLICY_REPORT.md`).
 - **Lifetime-count retirement (`ScoredRemoval`) beats windowed-threshold retirement
-  (`ThresholdRemoval`) everywhere tested** — by 30–377 h depending on severity and repair
-  quality (`RETIREMENT_POLICY_REPORT.md`).
+  (`ThresholdRemoval`) wherever the difference is measurable** — by 41–316 h depending on
+  severity and repair quality (`RETIREMENT_POLICY_REPORT.md`).
+- **Which lever wins depends on diagnosis quality; running both wins everywhere.**
+  Retirement alone beats realistic-information scheduling (`FewestAttributedFailuresFirst`)
+  only above a diagnosis probability of 0.59–0.91, lower the more severe the bad servers
+  are. Scheduling keeps 84–107% of its value as diagnosis falls from 1.0 to 0.5 (it only
+  needs a ranking); retirement keeps 46–74% (it needs two observed failures). Scheduling
+  plus `ScoredRemoval` is the fastest realistic policy at every diagnosis level tested
+  (`DIAGNOSIS_SWEEP_REPORT.md` §6).
 - **Misattribution interacts with retirement**: `ScoredRemoval` penalizes whichever
   server diagnosis blames, so at `diagnosis_uncertainty = 1.0` it retires innocent
   servers while the real offenders keep clean scores and turns net-harmful (+65 to +96 h;
@@ -98,8 +106,10 @@ severity, repair quality, and job lengths in this range is outside this repo's s
   `total_failure_count` and `failure_timestamps` are recorded on the server that truly
   failed, before diagnosis runs, including failures diagnosis misses. An operator without
   that ground truth would use `FewestAttributedFailuresFirst`, which reads only diagnosed,
-  attributed failures; it has been tested at Table I defaults (§2) but not in the
-  persistence regime (§3).
+  attributed failures; it has been tested at Table I defaults (§2) and, against missed
+  diagnoses (not misattribution), in the persistence regime (§3).
+- **Removal policies decide only when a server finishes repair**, which happens only after
+  a diagnosed failure; `ScoredRemoval`'s score also moves only on diagnosed failures.
 
 ## 5. Reproducibility
 
@@ -123,7 +133,7 @@ policy condition on the (unobservable, per the paper) auto-repair outcome, dropp
 effective escalation rate from `prob_auto_to_manual` (80%) to
 `auto_repair_fail_prob × prob_auto_to_manual` (32%). Under that semantics,
 `FewestFailuresFirst + NeverRemove` saved 68.6 h (3.3%) in the payoff regime (commit
-`7102330`); under the paper's semantics it saves 272.3 h (11.4%) — a ~4.0× change in
+`7102330`); under the paper's semantics it saved 272.3 h (11.4%; both at diagnosis 1.0) — a ~4.0× change in
 absolute hours. The regression and its revert are documented in `CHANGELOG.md`
 ("Revert: default escalation policy restored to the DSN'26 paper's model," 2026-09-21);
 anything generated between `8896140` and that revert used the wrong semantics and has
@@ -134,4 +144,4 @@ asserts on the actual numbers.
 
 ---
 
-*Generated 2026-09-22 from the committed reports and CSVs listed above.*
+*Generated 2026-09-22; updated 2026-11-20 after the paper-conformance rerun (CHANGELOG).*
