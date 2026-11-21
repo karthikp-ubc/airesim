@@ -1,6 +1,6 @@
-# commit: 2255b8cb6e6728223798d8527425758ae673e429
-# started: 2026-09-21T17:43:45.091888
-# command: python3 examples/job_length_sweep.py --workers 8
+# commit: be13c89c708e602bc3b5df1c48e092a92a5b8a91
+# started: 2026-11-20T18:49:37.870727
+# command: python3 examples/job_length_sweep.py --workers 2
 
   1/50 done
   2/50 done
@@ -54,4 +54,4 @@
   50/50 done
 wrote /home/karthik/Programs/airesim/examples/job_length_figures/replications.csv
 
-# finished: 2026-09-21T17:45:18.475813 exit=0
+# finished: 2026-11-20T18:59:06.508201 exit=0

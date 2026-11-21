@@ -28,42 +28,42 @@ success_increment=5, time_period=1 day → retired after 2 failures.
 | Policy | Cells Won |
 |--------|-----------|
 | Random+NeverRemove (baseline) | 0 |
-| Random+ScoredRemoval(SC_fast) | 12 |
-| FewestFailuresFirst+NeverRemove | 13 |
+| Random+ScoredRemoval(SC_fast) | 1 |
+| FewestFailuresFirst+NeverRemove | 24 |
 
 ## ScoredRemoval(SC_fast) Delta vs Baseline
 
 Negative values indicate the policy finished training faster than baseline.
 
-- **Best improvement**: -671.0 hrs at mult=25×, repair_fail=90%
-- **Worst regression**: +16.9 hrs at mult=5×, repair_fail=40%
+- **Best improvement**: -629.2 hrs at mult=25×, repair_fail=90%
+- **Worst regression**: +12.8 hrs at mult=10×, repair_fail=40%
 
 ### Delta Table (hrs, negative = faster)
 
 | mult↓ / fail_prob→ | 20% | 40% | 60% | 75% | 90% |
 |--------|--------|--------|--------|--------|--------|
-| 5× | -14.3 | +16.9 | -22.2 | -30.8 | -25.1 |
-| 10× | -15.2 | -15.9 | -64.8 | -106.7 | -185.8 |
-| 15× | -9.7 | -72.6 | -116.9 | -246.3 | -305.6 |
-| 20× | -34.3 | -73.3 | -187.6 | -308.9 | -488.6 |
-| 25× | -17.3 | -81.6 | -211.1 | -378.5 | -671.0 |
+| 5× | +2.5 | -10.8 | -8.8 | -35.1 | -42.9 |
+| 10× | -3.2 | +12.8 | -74.7 | -102.2 | -167.6 |
+| 15× | -26.2 | -69.8 | -104.8 | -181.5 | -317.1 |
+| 20× | -36.9 | -102.4 | -161.7 | -264.3 | -445.2 |
+| 25× | -49.2 | -47.2 | -202.5 | -359.9 | -629.2 |
 
 ## FewestFailuresFirst+NeverRemove Delta vs Baseline
 
 Negative values indicate the policy finished training faster than baseline.
 
-- **Best improvement**: -536.0 hrs at mult=25×, repair_fail=90%
-- **Worst regression**: -9.3 hrs at mult=20×, repair_fail=20%
+- **Best improvement**: -586.1 hrs at mult=25×, repair_fail=90%
+- **Worst regression**: -31.5 hrs at mult=5×, repair_fail=40%
 
 ### Delta Table (hrs, negative = faster)
 
 | mult↓ / fail_prob→ | 20% | 40% | 60% | 75% | 90% |
 |--------|--------|--------|--------|--------|--------|
-| 5× | -9.4 | -34.5 | -58.4 | -41.4 | -63.8 |
-| 10× | -31.6 | -63.0 | -93.7 | -133.4 | -198.6 |
-| 15× | -33.1 | -79.6 | -120.2 | -223.7 | -278.6 |
-| 20× | -9.3 | -72.9 | -163.5 | -266.4 | -395.6 |
-| 25× | -35.3 | -71.3 | -184.0 | -289.9 | -536.0 |
+| 5× | -40.4 | -31.5 | -46.2 | -66.4 | -80.1 |
+| 10× | -63.9 | -52.1 | -127.5 | -166.5 | -200.7 |
+| 15× | -63.2 | -135.3 | -156.5 | -241.3 | -329.8 |
+| 20× | -83.6 | -139.6 | -216.8 | -329.8 | -450.9 |
+| 25× | -60.7 | -103.0 | -242.1 | -376.1 | -586.1 |
 
 ## Figures
 

@@ -70,6 +70,31 @@ completing a repair resets it. Exponential runs are unaffected (memoryless).
   `return_borrowed_spares` for the config.yaml runs, and skips the `weibull` case,
   which age-aware sampling deliberately changes.
 
+#### Measured impact (all example experiments rerun at be13c89, paired by seed)
+
+- **Code fixes: no measurable change in training time at any setting tested.**
+  config.yaml, 30 seeds: +0.8 ± 4.6 h (3 of 30 runs differ at all). Table I, rows
+  where old and new use the same `diagnosis_probability` (0.6/0.8/1.0, 30 runs per
+  pool): Δ ≤ 0.12% per pool, every 95% CI includes 0. Spare return does add
+  preemptions at small pools (4112: 50 → 62 per run; 4128: 34 → 46; 4160: 4 → 6),
+  but at 20 min each this is a few hours on ~9 900. No run in any experiment stalled.
+- **Default `diagnosis_probability` 1.0 → 0.8: +0.5% to +7%.** config.yaml:
+  +52.0 ± 14.7 h (+0.53%); Table I: +0.5–0.7%; job-length sweep: +0.4–1.8%;
+  2D heat map / scheduling comparison: +2–7%, largest for retirement policies, which
+  see fewer correctly attributed failures (scheduling comparison, Random+ScoredRemoval:
+  390 → 338 retired, +6.9%). Experiments that set diagnosis explicitly
+  (diagnosis_sweep, diagnosis_realistic) are unchanged.
+- **Policy ranking changes under the 0.8 default.** In the 2D heat map,
+  FewestFailuresFirst+NeverRemove is now best in 21 of 25 cells; before, Random+
+  ScoredRemoval was best in most. The docs/*_REPORT.md files other than
+  DIAGNOSIS_REALISTIC_REPORT.md still quote the diagnosis = 1.0 numbers.
+- **Table I / Figure 2 conclusions unchanged.** Training time is dominated by the
+  random failure rate (max/min 2.9× over its range) and recovery time (1.47×); every other
+  parameter moves it by ≤ 2%, preemption wait time and working-pool size by ≤ 0.3%,
+  before and after. The pre-fix baseline is in
+  `examples/paper_table1_figures/before_fixes/` (master 63c1900 with this script,
+  `--base-diagnosis-probability 1.0`).
+
 Not code issues, noted for the paper: Figure 1 loops a failed repair back into repair,
 whereas the text (assumption 5, input 10) reintegrates the server still bad, which is
 what the simulator does; and the implementation is now ~2 900 lines, not ~2 700.

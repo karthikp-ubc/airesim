@@ -1,10 +1,10 @@
-# commit: 0cab8fbdf454051a868a13743d1790b4ca4a1673
-# started: 2026-09-21T15:18:20.709508
+# commit: be13c89c708e602bc3b5df1c48e092a92a5b8a91
+# started: 2026-11-20T16:07:15.108109
 # command: python3 examples/diagnosis_realistic_sweep.py --sanity --workers 4
 
-0 rows already present, 60 to run (commit 0cab8fbdf4, workers=4)
-  20/60 rows  elapsed 3.0 min  ETA 6.0 min
-  40/60 rows  elapsed 6.3 min  ETA 3.2 min
-  60/60 rows  elapsed 9.4 min  ETA 0.0 min
+0 rows already present, 60 to run (commit be13c89c70, workers=4)
+  20/60 rows  elapsed 4.1 min  ETA 8.1 min
+  40/60 rows  elapsed 9.0 min  ETA 4.5 min
+  60/60 rows  elapsed 13.3 min  ETA 0.0 min
 
-# finished: 2026-09-21T15:27:45.865340 exit=0
+# finished: 2026-11-20T16:20:34.480139 exit=0

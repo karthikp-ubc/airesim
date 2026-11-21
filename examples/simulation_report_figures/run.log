@@ -1,43 +1,43 @@
-# commit: da28d045aeb687e2f7991924bb1c67e7501cd076
-# started: 2026-09-21T18:20:41.717037
+# commit: be13c89c708e602bc3b5df1c48e092a92a5b8a91
+# started: 2026-11-20T18:21:06.252043
 # command: python3 examples/simulation_report_stats.py
 
-  rep    1: training_time=9881.05 hrs
-  rep    2: training_time=9877.62 hrs
-  rep    3: training_time=9810.92 hrs
-  rep    4: training_time=9930.23 hrs
-  rep    5: training_time=9893.67 hrs
-  rep    6: training_time=9841.48 hrs
-  rep    7: training_time=9835.92 hrs
-  rep    8: training_time=9928.63 hrs
-  rep    9: training_time=9902.43 hrs
-  rep   10: training_time=9865.95 hrs
-  rep   11: training_time=9845.20 hrs
-  rep   12: training_time=9837.53 hrs
-  rep   13: training_time=9874.00 hrs
-  rep   14: training_time=9910.62 hrs
-  rep   15: training_time=9881.28 hrs
-  rep   16: training_time=9955.07 hrs
-  rep   17: training_time=9870.87 hrs
-  rep   18: training_time=9838.87 hrs
-  rep   19: training_time=9902.43 hrs
-  rep   20: training_time=9892.87 hrs
-  rep   21: training_time=9813.72 hrs
-  rep   22: training_time=9859.27 hrs
-  rep   23: training_time=9888.37 hrs
-  rep   24: training_time=9871.10 hrs
-  rep   25: training_time=9862.90 hrs
-  rep   26: training_time=9869.38 hrs
-  rep   27: training_time=9910.00 hrs
-  rep   28: training_time=9847.38 hrs
-  rep   29: training_time=9844.18 hrs
-  rep   30: training_time=9843.97 hrs
-          CI: 9872.90 ± 12.87 hrs (rel=0.1%, target=5.0%)
+  rep    1: training_time=9940.62 hrs
+  rep    2: training_time=9932.60 hrs
+  rep    3: training_time=9870.08 hrs
+  rep    4: training_time=9899.42 hrs
+  rep    5: training_time=9937.17 hrs
+  rep    6: training_time=9912.52 hrs
+  rep    7: training_time=9926.85 hrs
+  rep    8: training_time=9923.23 hrs
+  rep    9: training_time=9915.95 hrs
+  rep   10: training_time=9920.85 hrs
+  rep   11: training_time=9869.42 hrs
+  rep   12: training_time=9848.62 hrs
+  rep   13: training_time=9930.67 hrs
+  rep   14: training_time=9968.00 hrs
+  rep   15: training_time=9883.47 hrs
+  rep   16: training_time=10013.13 hrs
+  rep   17: training_time=9916.62 hrs
+  rep   18: training_time=9990.18 hrs
+  rep   19: training_time=9927.80 hrs
+  rep   20: training_time=9947.62 hrs
+  rep   21: training_time=9940.85 hrs
+  rep   22: training_time=9942.72 hrs
+  rep   23: training_time=9908.32 hrs
+  rep   24: training_time=9898.13 hrs
+  rep   25: training_time=9936.42 hrs
+  rep   26: training_time=10019.42 hrs
+  rep   27: training_time=9922.98 hrs
+  rep   28: training_time=9942.98 hrs
+  rep   29: training_time=9950.52 hrs
+  rep   30: training_time=9833.98 hrs
+          CI: 9925.70 ± 15.41 hrs (rel=0.2%, target=5.0%)
 AdaptiveRunner [CONVERGED]
   runs              : 30
-  mean training time: 9872.90 hrs
-  95% CI half-width : ±12.87 hrs (0.1% of mean)
+  mean training time: 9925.70 hrs
+  95% CI half-width : ±15.41 hrs (0.2% of mean)
   target accuracy   : ±5.0% of mean
 wrote /home/karthik/Programs/airesim/examples/simulation_report_figures/results.csv
 
-# finished: 2026-09-21T18:25:23.460995 exit=0
+# finished: 2026-11-20T18:49:37.817719 exit=0

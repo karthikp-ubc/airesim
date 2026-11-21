@@ -1,0 +1,65 @@
+# commit: be13c89c708e602bc3b5df1c48e092a92a5b8a91
+# started: 2026-11-20T18:59:10.138722
+# command: python3 examples/retirement_payoff.py
+
+AIReSim — Retirement Payoff Experiment
+=================================================================
+
+Target regime parameters:
+  systematic_failure_rate_multiplier : 20×
+  bad-server mean TTF                : 2.4 days  (good = 50 days)
+  manual_repair_fail_prob            : 0.75  (effective fix rate ≈ 28%)
+  recovery_time                      : 60 min per failure
+  bad servers                        : 368 (8% of pool)
+  pool headroom                      : 488 idle servers
+  replications                       : 20
+
+─── Experiment 1: policy comparison (target regime) ───
+  bad fraction : 8%  (368 bad servers)
+  multiplier   : 20×
+  repair fix   : 25% effective  (manual_repair_fail_prob=0.75)
+  recovery_time: 60 min
+
+  Policy                 Time (hrs)    Retired   vs Never
+  ----------------------------------------------------------
+  NeverRemove      2474.9 ±  47.6h     0.0 ± 0.0           —
+  Thresh≥5/7d      2474.9 ±  47.6h     0.0 ± 0.0       +0.0h
+  Thresh≥3/7d      2503.3 ±  52.9h     5.8 ± 1.8      -28.4h
+  Thresh≥2/7d      2417.6 ±  49.5h   102.7 ± 9.0      +57.2h
+  Thresh≥1/7d      1348.0 ±  72.8h   705.0 ± 0.0    +1126.9h
+
+─── Experiment 2: benefit vs systematic_failure_rate_multiplier ───
+  (NeverRemove vs ThresholdRemoval(2, 7d), all other params fixed)
+
+    mult   NeverRemove   Thresh=2/7d     delta   retired
+  -------------------------------------------------------
+      5×        1864.4        1853.4     +11.0h      28.6
+     10×        2143.5        2117.4     +26.1h      53.4
+     15×        2351.2        2294.1     +57.0h      82.5
+     20×        2474.9        2417.6     +57.2h     102.7
+     25×        2608.4        2476.2    +132.2h     122.7
+
+─── Experiment 3: benefit vs manual_repair_fail_prob ───
+  (NeverRemove vs ThresholdRemoval(2, 7d), target regime otherwise)
+
+   fail_prob   fix_rate   NeverRemove   Thresh=2/7d     delta   retired
+  ----------------------------------------------------------------------
+        0.20       72%         2051.7        2034.0     +17.7h      53.6
+        0.40       56%         2175.6        2138.0     +37.6h      72.5
+        0.60       40%         2325.2        2262.2     +63.0h      87.3
+        0.75       28%         2474.9        2417.6     +57.2h     102.7
+        0.90       16%         2698.0        2560.1    +137.9h     125.5
+
+Saving plots …
+
+  Saved → /home/karthik/Programs/airesim/examples/retirement_payoff_figures/payoff_policies.png
+  Saved → /home/karthik/Programs/airesim/examples/retirement_payoff_figures/payoff_multiplier.png
+  Saved → /home/karthik/Programs/airesim/examples/retirement_payoff_figures/payoff_repair_fail.png
+
+=================================================================
+Done. PNGs written to: /home/karthik/Programs/airesim/examples/retirement_payoff_figures
+  payoff_multiplier.png  (77 KB)
+  payoff_policies.png  (92 KB)
+  payoff_repair_fail.png  (96 KB)
+
+# finished: 2026-11-20T19:53:14.088669 exit=0

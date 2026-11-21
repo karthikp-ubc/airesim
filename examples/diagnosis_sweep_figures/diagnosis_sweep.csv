@@ -68,7 +68,7 @@ diagnosis_uncertainty,0.8,FewestFailures,Thresh ≥2/7d,2208.59,43.71,30.6,1872.
 diagnosis_uncertainty,0.8,FewestFailures,ScoredRemoval,2268.80,41.31,305.1,1931.6,0.00
 diagnosis_uncertainty,1.0,Random,NeverRemove,3191.49,50.41,0.0,2855.0,0.00
 diagnosis_uncertainty,1.0,Random,Thresh ≥2/7d,3158.71,36.43,4.9,2822.2,0.00
-diagnosis_uncertainty,1.0,Random,ScoredRemoval,3287.71,121.23,646.0,2871.4,0.12
+diagnosis_uncertainty,1.0,Random,ScoredRemoval,3308.84,179.01,647.9,2876.9,0.12
 diagnosis_uncertainty,1.0,FewestFailures,NeverRemove,2315.99,64.62,0.0,1979.6,0.00
 diagnosis_uncertainty,1.0,FewestFailures,Thresh ≥2/7d,2326.75,74.83,2.1,1990.4,0.00
 diagnosis_uncertainty,1.0,FewestFailures,ScoredRemoval,2381.47,44.69,359.9,2044.1,0.00

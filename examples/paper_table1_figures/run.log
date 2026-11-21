@@ -1,0 +1,222 @@
+# commit: be13c89c708e602bc3b5df1c48e092a92a5b8a91
+# started: 2026-11-20T16:07:01.228110
+# command: python3 examples/paper_table1_sweep.py --workers 4 --replications 10
+
+1800 runs on 4 workers; base overrides: {}
+  50/1800 runs done
+  100/1800 runs done
+  150/1800 runs done
+  200/1800 runs done
+  250/1800 runs done
+  300/1800 runs done
+  350/1800 runs done
+  400/1800 runs done
+  450/1800 runs done
+  500/1800 runs done
+  550/1800 runs done
+  600/1800 runs done
+  650/1800 runs done
+  700/1800 runs done
+  750/1800 runs done
+  800/1800 runs done
+  850/1800 runs done
+  900/1800 runs done
+  950/1800 runs done
+  1000/1800 runs done
+  1050/1800 runs done
+  1100/1800 runs done
+  1150/1800 runs done
+  1200/1800 runs done
+  1250/1800 runs done
+  1300/1800 runs done
+  1350/1800 runs done
+  1400/1800 runs done
+  1450/1800 runs done
+  1500/1800 runs done
+  1550/1800 runs done
+  1600/1800 runs done
+  1650/1800 runs done
+  1700/1800 runs done
+  1750/1800 runs done
+  1800/1800 runs done
+               auto_repair_fail_prob = 0.2          pool=4112  training=  9930.4 ±  19.8 hrs  preempt=  65.1
+               auto_repair_fail_prob = 0.2          pool=4128  training=  9899.0 ±  24.4 hrs  preempt=  42.4
+               auto_repair_fail_prob = 0.2          pool=4160  training=  9903.0 ±  18.8 hrs  preempt=   0.0
+               auto_repair_fail_prob = 0.2          pool=4192  training=  9915.4 ±  23.3 hrs  preempt=   0.0
+               auto_repair_fail_prob = 0.4          pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+               auto_repair_fail_prob = 0.4          pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+               auto_repair_fail_prob = 0.4          pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+               auto_repair_fail_prob = 0.4          pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+               auto_repair_fail_prob = 0.6          pool=4112  training=  9960.2 ±  25.9 hrs  preempt=  60.6
+               auto_repair_fail_prob = 0.6          pool=4128  training=  9949.3 ±  32.5 hrs  preempt=  40.8
+               auto_repair_fail_prob = 0.6          pool=4160  training=  9942.1 ±  18.6 hrs  preempt=   0.0
+               auto_repair_fail_prob = 0.6          pool=4192  training=  9973.5 ±  26.0 hrs  preempt=   0.0
+                    auto_repair_time = 60           pool=4112  training=  9955.2 ±  17.3 hrs  preempt=  60.4
+                    auto_repair_time = 60           pool=4128  training=  9932.9 ±  23.9 hrs  preempt=  44.5
+                    auto_repair_time = 60           pool=4160  training=  9919.5 ±  22.0 hrs  preempt=   0.0
+                    auto_repair_time = 60           pool=4192  training=  9934.8 ±  29.3 hrs  preempt=   0.0
+                    auto_repair_time = 120          pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                    auto_repair_time = 120          pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                    auto_repair_time = 120          pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                    auto_repair_time = 120          pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                    auto_repair_time = 180          pool=4112  training=  9942.4 ±  17.7 hrs  preempt=  63.3
+                    auto_repair_time = 180          pool=4128  training=  9942.5 ±  11.5 hrs  preempt=  45.3
+                    auto_repair_time = 180          pool=4160  training=  9904.4 ±  19.0 hrs  preempt=   1.0
+                    auto_repair_time = 180          pool=4192  training=  9924.5 ±  25.7 hrs  preempt=   0.0
+               diagnosis_probability = 0.6          pool=4112  training= 10028.8 ±  21.1 hrs  preempt=  40.7
+               diagnosis_probability = 0.6          pool=4128  training= 10041.3 ±  15.1 hrs  preempt=  24.2
+               diagnosis_probability = 0.6          pool=4160  training= 10010.5 ±  18.9 hrs  preempt=   0.0
+               diagnosis_probability = 0.6          pool=4192  training= 10023.9 ±  20.2 hrs  preempt=   0.0
+               diagnosis_probability = 0.8          pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+               diagnosis_probability = 0.8          pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+               diagnosis_probability = 0.8          pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+               diagnosis_probability = 0.8          pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+               diagnosis_probability = 1            pool=4112  training=  9896.7 ±  22.7 hrs  preempt=  80.2
+               diagnosis_probability = 1            pool=4128  training=  9885.3 ±  16.8 hrs  preempt=  61.8
+               diagnosis_probability = 1            pool=4160  training=  9865.3 ±  16.8 hrs  preempt=  18.9
+               diagnosis_probability = 1            pool=4192  training=  9865.2 ±  13.0 hrs  preempt=   0.0
+                 host_selection_time = 1            pool=4112  training=  9964.8 ±  28.4 hrs  preempt=  63.7
+                 host_selection_time = 1            pool=4128  training=  9944.4 ±  23.6 hrs  preempt=  48.9
+                 host_selection_time = 1            pool=4160  training=  9920.0 ±  14.6 hrs  preempt=   0.0
+                 host_selection_time = 1            pool=4192  training=  9930.1 ±  17.6 hrs  preempt=   0.0
+                 host_selection_time = 3            pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                 host_selection_time = 3            pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                 host_selection_time = 3            pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                 host_selection_time = 3            pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                 host_selection_time = 5            pool=4112  training=  9942.3 ±  16.5 hrs  preempt=  58.1
+                 host_selection_time = 5            pool=4128  training=  9947.1 ±  24.0 hrs  preempt=  51.4
+                 host_selection_time = 5            pool=4160  training=  9910.1 ±  24.4 hrs  preempt=   1.0
+                 host_selection_time = 5            pool=4192  training=  9920.2 ±  24.3 hrs  preempt=   0.0
+                 host_selection_time = 10           pool=4112  training=  9953.6 ±  20.8 hrs  preempt=  57.7
+                 host_selection_time = 10           pool=4128  training=  9945.5 ±  20.2 hrs  preempt=  46.0
+                 host_selection_time = 10           pool=4160  training=  9918.7 ±  31.0 hrs  preempt=   1.2
+                 host_selection_time = 10           pool=4192  training=  9910.4 ±  21.6 hrs  preempt=   0.0
+             manual_repair_fail_prob = 0.1          pool=4112  training=  9935.8 ±  22.7 hrs  preempt=  58.1
+             manual_repair_fail_prob = 0.1          pool=4128  training=  9895.6 ±   9.0 hrs  preempt=  44.0
+             manual_repair_fail_prob = 0.1          pool=4160  training=  9899.8 ±  12.3 hrs  preempt=   1.1
+             manual_repair_fail_prob = 0.1          pool=4192  training=  9899.9 ±  24.7 hrs  preempt=   0.0
+             manual_repair_fail_prob = 0.2          pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+             manual_repair_fail_prob = 0.2          pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+             manual_repair_fail_prob = 0.2          pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+             manual_repair_fail_prob = 0.2          pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+             manual_repair_fail_prob = 0.3          pool=4112  training=  9977.8 ±  21.3 hrs  preempt=  58.2
+             manual_repair_fail_prob = 0.3          pool=4128  training=  9978.8 ±  20.9 hrs  preempt=  46.5
+             manual_repair_fail_prob = 0.3          pool=4160  training=  9965.6 ±  21.7 hrs  preempt=   1.2
+             manual_repair_fail_prob = 0.3          pool=4192  training=  9943.6 ±  11.5 hrs  preempt=   0.0
+                  manual_repair_time = 1440         pool=4112  training=  9931.0 ±  19.5 hrs  preempt=  26.5
+                  manual_repair_time = 1440         pool=4128  training=  9922.9 ±  18.9 hrs  preempt=  12.3
+                  manual_repair_time = 1440         pool=4160  training=  9929.4 ±  28.4 hrs  preempt=   0.0
+                  manual_repair_time = 1440         pool=4192  training=  9919.8 ±  22.8 hrs  preempt=   0.0
+                  manual_repair_time = 2880         pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                  manual_repair_time = 2880         pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                  manual_repair_time = 2880         pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                  manual_repair_time = 2880         pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                  manual_repair_time = 4320         pool=4112  training=  9967.8 ±  16.7 hrs  preempt= 109.3
+                  manual_repair_time = 4320         pool=4128  training=  9963.2 ±  27.9 hrs  preempt=  90.9
+                  manual_repair_time = 4320         pool=4160  training=  9930.9 ±  21.5 hrs  preempt=  50.2
+                  manual_repair_time = 4320         pool=4192  training=  9923.9 ±  26.6 hrs  preempt=   0.0
+                preemption_wait_time = 10           pool=4112  training=  9944.7 ±  16.1 hrs  preempt=  72.1
+                preemption_wait_time = 10           pool=4128  training=  9937.9 ±  27.7 hrs  preempt=  47.6
+                preemption_wait_time = 10           pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                preemption_wait_time = 10           pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                preemption_wait_time = 20           pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                preemption_wait_time = 20           pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                preemption_wait_time = 20           pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                preemption_wait_time = 20           pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                preemption_wait_time = 30           pool=4112  training=  9947.4 ±  14.5 hrs  preempt=  59.1
+                preemption_wait_time = 30           pool=4128  training=  9931.0 ±  22.3 hrs  preempt=  41.6
+                preemption_wait_time = 30           pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                preemption_wait_time = 30           pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                 prob_auto_to_manual = 0.7          pool=4112  training=  9935.8 ±  23.3 hrs  preempt=  49.8
+                 prob_auto_to_manual = 0.7          pool=4128  training=  9943.9 ±  17.2 hrs  preempt=  37.1
+                 prob_auto_to_manual = 0.7          pool=4160  training=  9936.9 ±  26.9 hrs  preempt=   0.0
+                 prob_auto_to_manual = 0.7          pool=4192  training=  9942.8 ±  23.7 hrs  preempt=   0.0
+                 prob_auto_to_manual = 0.8          pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                 prob_auto_to_manual = 0.8          pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                 prob_auto_to_manual = 0.8          pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                 prob_auto_to_manual = 0.8          pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                 prob_auto_to_manual = 0.9          pool=4112  training=  9946.9 ±  22.2 hrs  preempt=  71.0
+                 prob_auto_to_manual = 0.9          pool=4128  training=  9941.9 ±  16.6 hrs  preempt=  67.6
+                 prob_auto_to_manual = 0.9          pool=4160  training=  9940.0 ±  19.3 hrs  preempt=   8.0
+                 prob_auto_to_manual = 0.9          pool=4192  training=  9917.2 ±  19.4 hrs  preempt=   0.0
+                 random_failure_rate = 3.47222e-06  pool=4112  training=  8185.3 ±  15.6 hrs  preempt=  31.2
+                 random_failure_rate = 3.47222e-06  pool=4128  training=  8187.6 ±  13.4 hrs  preempt=  15.0
+                 random_failure_rate = 3.47222e-06  pool=4160  training=  8174.5 ±  19.3 hrs  preempt=   0.0
+                 random_failure_rate = 3.47222e-06  pool=4192  training=  8161.8 ±  10.8 hrs  preempt=   0.0
+                 random_failure_rate = 6.94444e-06  pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                 random_failure_rate = 6.94444e-06  pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                 random_failure_rate = 6.94444e-06  pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                 random_failure_rate = 6.94444e-06  pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                 random_failure_rate = 1.73611e-05  pool=4112  training= 15254.9 ±  41.0 hrs  preempt= 153.7
+                 random_failure_rate = 1.73611e-05  pool=4128  training= 15197.3 ±  35.3 hrs  preempt= 134.9
+                 random_failure_rate = 1.73611e-05  pool=4160  training= 15209.7 ±  42.9 hrs  preempt=  98.7
+                 random_failure_rate = 1.73611e-05  pool=4192  training= 15210.9 ±  32.6 hrs  preempt=   0.0
+                 random_failure_rate = 3.47222e-05  pool=4112  training= 24067.2 ±  51.4 hrs  preempt= 305.4
+                 random_failure_rate = 3.47222e-05  pool=4128  training= 24021.2 ±  61.3 hrs  preempt= 277.9
+                 random_failure_rate = 3.47222e-05  pool=4160  training= 24007.1 ±  34.1 hrs  preempt= 218.8
+                 random_failure_rate = 3.47222e-05  pool=4192  training= 23893.1 ±  41.4 hrs  preempt=  16.7
+                       recovery_time = 10           pool=4112  training=  8067.1 ±  14.3 hrs  preempt=  93.5
+                       recovery_time = 10           pool=4128  training=  8064.1 ±  13.9 hrs  preempt=  74.5
+                       recovery_time = 10           pool=4160  training=  8052.4 ±   9.7 hrs  preempt=  27.8
+                       recovery_time = 10           pool=4192  training=  8040.7 ±  10.6 hrs  preempt=   0.0
+                       recovery_time = 20           pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                       recovery_time = 20           pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                       recovery_time = 20           pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                       recovery_time = 20           pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                       recovery_time = 30           pool=4112  training= 11827.1 ±  37.7 hrs  preempt=  43.8
+                       recovery_time = 30           pool=4128  training= 11812.5 ±  37.6 hrs  preempt=  27.6
+                       recovery_time = 30           pool=4160  training= 11783.4 ±  31.6 hrs  preempt=   0.0
+                       recovery_time = 30           pool=4192  training= 11796.2 ±  31.5 hrs  preempt=   0.0
+                     spare_pool_size = 200          pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                     spare_pool_size = 200          pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                     spare_pool_size = 200          pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                     spare_pool_size = 200          pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                     spare_pool_size = 300          pool=4112  training=  9936.9 ±  11.2 hrs  preempt=  65.8
+                     spare_pool_size = 300          pool=4128  training=  9937.8 ±  20.0 hrs  preempt=  46.0
+                     spare_pool_size = 300          pool=4160  training=  9922.2 ±  22.1 hrs  preempt=   2.6
+                     spare_pool_size = 300          pool=4192  training=  9935.2 ±  19.8 hrs  preempt=   0.0
+                     spare_pool_size = 400          pool=4112  training=  9950.2 ±  24.8 hrs  preempt=  63.6
+                     spare_pool_size = 400          pool=4128  training=  9956.9 ±  26.9 hrs  preempt=  47.0
+                     spare_pool_size = 400          pool=4160  training=  9925.3 ±   7.7 hrs  preempt=   1.1
+                     spare_pool_size = 400          pool=4192  training=  9945.2 ±  16.8 hrs  preempt=   0.0
+         systematic_failure_fraction = 0.1          pool=4112  training=  9869.9 ±  23.6 hrs  preempt=  59.1
+         systematic_failure_fraction = 0.1          pool=4128  training=  9839.4 ±  17.2 hrs  preempt=  47.0
+         systematic_failure_fraction = 0.1          pool=4160  training=  9819.7 ±  24.9 hrs  preempt=   0.0
+         systematic_failure_fraction = 0.1          pool=4192  training=  9846.2 ±  22.5 hrs  preempt=   0.0
+         systematic_failure_fraction = 0.15         pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+         systematic_failure_fraction = 0.15         pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+         systematic_failure_fraction = 0.15         pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+         systematic_failure_fraction = 0.15         pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+         systematic_failure_fraction = 0.2          pool=4112  training= 10044.3 ±  19.7 hrs  preempt=  64.1
+         systematic_failure_fraction = 0.2          pool=4128  training= 10031.2 ±  15.9 hrs  preempt=  44.4
+         systematic_failure_fraction = 0.2          pool=4160  training= 10018.2 ±  29.5 hrs  preempt=   7.5
+         systematic_failure_fraction = 0.2          pool=4192  training= 10013.9 ±  14.8 hrs  preempt=   0.0
+  systematic_failure_rate_multiplier = 3            pool=4112  training=  9889.4 ±  19.4 hrs  preempt=  56.2
+  systematic_failure_rate_multiplier = 3            pool=4128  training=  9894.5 ±  27.4 hrs  preempt=  42.7
+  systematic_failure_rate_multiplier = 3            pool=4160  training=  9887.7 ±  20.7 hrs  preempt=   0.0
+  systematic_failure_rate_multiplier = 3            pool=4192  training=  9889.1 ±  14.0 hrs  preempt=   0.0
+  systematic_failure_rate_multiplier = 5            pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+  systematic_failure_rate_multiplier = 5            pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+  systematic_failure_rate_multiplier = 5            pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+  systematic_failure_rate_multiplier = 5            pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+  systematic_failure_rate_multiplier = 10           pool=4112  training=  9967.5 ±  20.5 hrs  preempt=  67.4
+  systematic_failure_rate_multiplier = 10           pool=4128  training=  9963.9 ±  27.1 hrs  preempt=  50.4
+  systematic_failure_rate_multiplier = 10           pool=4160  training=  9945.9 ±   5.4 hrs  preempt=   8.1
+  systematic_failure_rate_multiplier = 10           pool=4192  training=  9934.1 ±  28.1 hrs  preempt=   0.0
+                       warm_standbys = 4            pool=4112  training= 10171.7 ±  25.1 hrs  preempt= 645.4
+                       warm_standbys = 4            pool=4128  training= 10138.8 ±  33.3 hrs  preempt= 585.9
+                       warm_standbys = 4            pool=4160  training=  9958.1 ±  20.4 hrs  preempt=   0.4
+                       warm_standbys = 4            pool=4192  training=  9944.5 ±  19.9 hrs  preempt=   0.0
+                       warm_standbys = 8            pool=4112  training= 10024.6 ±  14.4 hrs  preempt= 267.2
+                       warm_standbys = 8            pool=4128  training= 10021.7 ±  27.7 hrs  preempt= 242.1
+                       warm_standbys = 8            pool=4160  training=  9925.2 ±  12.0 hrs  preempt=   0.7
+                       warm_standbys = 8            pool=4192  training=  9956.9 ±  20.9 hrs  preempt=   0.0
+                       warm_standbys = 16           pool=4112  training=  9938.7 ±  26.9 hrs  preempt=  64.2
+                       warm_standbys = 16           pool=4128  training=  9957.6 ±  18.1 hrs  preempt=  51.3
+                       warm_standbys = 16           pool=4160  training=  9917.9 ±  12.9 hrs  preempt=   0.0
+                       warm_standbys = 16           pool=4192  training=  9925.1 ±  26.9 hrs  preempt=   0.0
+                       warm_standbys = 32           pool=4128  training=  9934.9 ±  24.3 hrs  preempt=  40.1
+                       warm_standbys = 32           pool=4160  training=  9932.2 ±  19.0 hrs  preempt=   0.0
+                       warm_standbys = 32           pool=4192  training=  9922.0 ±  20.9 hrs  preempt=   0.0
+
+# finished: 2026-11-20T20:44:40.906160 exit=0
