@@ -23,13 +23,16 @@ the paper defaults only scheduling, diagnosis and the job-length sweep
 
 ## Findings
 
-**1. Training time is an accounting identity.** In every run, `training_time =
+**1. Training time is an accounting identity when capacity suffices.** In every run
+without job stalls (all runs behind these reports), `training_time =
 job_length + total_failures × recovery_time + host_selection_count × host_selection_time
 + preemption_count × preemption_wait_time` (largest residual across 1,200 runs: 1.2e-10 h,
 `DIAGNOSIS_REALISTIC_REPORT.md` §6). No lost work is charged since the last checkpoint, so
 any policy's, parameter's, or misdiagnosis's effect on training time is exactly its effect
 on the failure count, plus small host-selection and preemption terms — every finding below
-is a statement about failure counts through this identity.
+is a statement about failure counts through this identity. When the pools can't field
+`job_size` servers, stall waiting adds a term outside the identity; in the tight-capacity
+`examples/stress_scenario.py` it reaches 41% of training time (CHANGELOG, 2026-11-21).
 
 **2. At default parameters the pipeline is already efficient.** Effective Training Ratio
 (ETR) is 61.9%. Fixed per-failure checkpoint reload (`recovery_time`) is 38.1% of wall-clock

@@ -72,12 +72,12 @@ completing a repair resets it. Exponential runs are unaffected (memoryless).
 
 #### Measured impact (all example experiments rerun at be13c89, paired by seed)
 
-- **Code fixes: no measurable change in training time at any setting tested.**
-  config.yaml, 30 seeds: +0.8 ± 4.6 h (3 of 30 runs differ at all). Table I, rows
+- **Code fixes: no measurable change in training time, except in tight-capacity
+  configurations where jobs stall** (see the last bullet of this list). config.yaml, 30 seeds: +0.8 ± 4.6 h (3 of 30 runs differ at all). Table I, rows
   where old and new use the same `diagnosis_probability` (0.6/0.8/1.0, 30 runs per
   pool): Δ ≤ 0.12% per pool, every 95% CI includes 0. Spare return does add
   preemptions at small pools (4112: 50 → 62 per run; 4128: 34 → 46; 4160: 4 → 6),
-  but at 20 min each this is a few hours on ~9 900. No run in any experiment stalled.
+  but at 20 min each this is a few hours on ~9 900. No run in these experiments stalled.
 - **Default `diagnosis_probability` 1.0 → 0.8: +0.5% to +7%.** config.yaml:
   +52.0 ± 14.7 h (+0.53%); Table I: +0.5–0.7%; job-length sweep: +0.4–1.8%;
   2D heat map / scheduling comparison: +2–7%, largest for retirement policies, which
@@ -117,8 +117,25 @@ completing a repair resets it. Exponential runs are unaffected (memoryless).
   over ThresholdRemoval is no longer significant at the mildest settings; the ceiling on
   any node-management policy at Table I defaults rises from 2.3% to 2.9%.
   ARCHITECTURE.md and TUTORIAL.md now qualify the `HighestScoreFirst` ≡
-  `FewestFailuresFirst` equivalence. Not rerun, so their figures predate this change:
-  `scored_sweep.py`, `retirement_sweep.py`, `stress_scenario.py`.
+  `FewestFailuresFirst` equivalence.
+- **The stall fix matters when capacity is tight** (`stress_scenario.py`, rerun
+  2026-11-21: 16 servers of headroom, 10–100 spares, 7-day job). Paired by
+  configuration, old vs new code both at diagnosis 1.0: the new code is up to 419 h
+  (19%) faster at the 5× failure rate with 10 spares, 147 h (13%) at its 50-spare
+  baseline, and unchanged with 100 spares. Turning `return_borrowed_spares` off changes
+  nothing there (the pool never has spares to return), so the whole effect is the stall
+  threshold: the old code kept the job waiting for `job_size + warm_standbys` servers.
+  Jobs still stall heavily (about 1,400 stalls per run with 10 spares), and stall waiting
+  is up to 41% of training time — time that is not in the accounting identity in
+  FINDINGS.md §1. Spare-pool size remains a high-impact parameter there, with a smaller
+  range (5×: 858–1,834 h at diagnosis 1.0, was 862–2,253 h). The diagnosis default then
+  lowers times further in the tightest cells (fewer servers away in repair).
+- **Other reruns (2026-11-21):** `retirement_sweep.py` (16 servers of headroom):
+  conclusions unchanged, `Thresh ≥2/7d` still costs 40–110 h against never retiring;
+  code-fix differences are within noise. `scored_sweep.py`: identical except the one
+  configuration that depletes the cluster, which now runs until fewer than `job_size`
+  servers remain (265 retired instead of 252) and so reports a longer time-to-depletion;
+  still no setting beats `NeverRemove`.
 
 Not code issues, noted for the paper: Figure 1 loops a failed repair back into repair,
 whereas the text (assumption 5, input 10) reintegrates the server still bad, which is

@@ -9,7 +9,8 @@ generated from a committed CSV by the report or script named next to it — see
 
 ## 1. The accounting identity
 
-In every AIReSim run, wall-clock training time decomposes exactly:
+In every AIReSim run in which the job never stalls — every run behind the reports listed
+here — wall-clock training time decomposes exactly:
 
 ```
 training_time = job_length + total_failures × recovery_time
@@ -25,6 +26,13 @@ largest residual **1.2e-10 h** (`DIAGNOSIS_REALISTIC_REPORT.md` §6,
 **every parameter, misdiagnosis mode, or policy this repo studies acts on training time
 only by changing the failure count** (plus the small host-selection and preemption
 terms). There is no other channel.
+
+The exception is capacity: when the working and spare pools can't field `job_size`
+servers, the job stalls until a repair returns one, and that wait is not in the identity.
+In `examples/stress_scenario.py` (16 servers of headroom, 10 spares, 5× failure rate)
+stall waiting is up to 41% of training time, and spare-pool size becomes one of the two
+largest levers. Waiting for servers can dominate a capacity-constrained cluster; the
+Table I configuration simply has enough capacity that it never happens.
 
 ## 2. At Table I defaults
 

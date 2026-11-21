@@ -1,0 +1,51 @@
+# commit: 277f43c341125ccf88dc01de76ebd6aebb870e06
+# started: 2026-11-21T08:16:49.643562
+# command: python3 examples/retirement_sweep.py
+
+AIReSim — Retirement Sweep
+======================================================================
+  failure rate : 0.0500/day/server (7200× default)
+  working pool : 4128  (headroom = 16)
+  spare pool   : 200
+  job length   : 14 days compute
+  replications : 10
+  grid         : 4 repair-fail-probs × 4 thresholds = 16 cells
+  output dir   : /home/karthik/Programs/airesim/examples/retirement_figures
+
+  Running  threshold=Never    auto_fail=0.2 … time= 1561.7± 13.0h  retired=  0.0± 0.0
+  Running  threshold=Never    auto_fail=0.4 … time= 1581.9± 18.7h  retired=  0.0± 0.0
+  Running  threshold=Never    auto_fail=0.6 … time= 1579.8± 20.0h  retired=  0.0± 0.0
+  Running  threshold=Never    auto_fail=0.8 … time= 1612.8± 18.6h  retired=  0.0± 0.0
+  Running  threshold=5 / 7d   auto_fail=0.2 … time= 1561.7± 13.0h  retired=  0.0± 0.0
+  Running  threshold=5 / 7d   auto_fail=0.4 … time= 1581.9± 18.7h  retired=  0.0± 0.0
+  Running  threshold=5 / 7d   auto_fail=0.6 … time= 1579.8± 20.0h  retired=  0.0± 0.0
+  Running  threshold=5 / 7d   auto_fail=0.8 … time= 1612.8± 18.6h  retired=  0.0± 0.0
+  Running  threshold=3 / 7d   auto_fail=0.2 … time= 1570.4± 19.7h  retired=  5.4± 2.5
+  Running  threshold=3 / 7d   auto_fail=0.4 … time= 1578.5± 12.8h  retired=  6.1± 1.8
+  Running  threshold=3 / 7d   auto_fail=0.6 … time= 1598.5± 22.2h  retired=  6.7± 3.4
+  Running  threshold=3 / 7d   auto_fail=0.8 … time= 1604.8± 19.6h  retired=  7.7± 2.2
+  Running  threshold=2 / 7d   auto_fail=0.2 … time= 1602.8± 26.8h  retired=150.3±11.8
+  Running  threshold=2 / 7d   auto_fail=0.4 … time= 1644.2± 31.9h  retired=163.1±10.0
+  Running  threshold=2 / 7d   auto_fail=0.6 … time= 1686.1± 69.6h  retired=173.8±14.9
+  Running  threshold=2 / 7d   auto_fail=0.8 … time= 1688.0± 70.3h  retired=170.3±12.0
+
+======================================================================
+Summary: mean training time (hrs) / mean servers retired
+======================================================================
+  Threshold     fail=0.2   fail=0.4   fail=0.6   fail=0.8 
+  ------------------------------------------------------------------
+  Never           1562/  0    1582/  0    1580/  0    1613/  0
+  5 / 7d          1562/  0    1582/  0    1580/  0    1613/  0
+  3 / 7d          1570/  5    1578/  6    1599/  7    1605/  8
+  2 / 7d          1603/150    1644/163    1686/174    1688/170
+
+Saving plots …
+  Saved → /home/karthik/Programs/airesim/examples/retirement_figures/retirement_heatmaps.png
+  Saved → /home/karthik/Programs/airesim/examples/retirement_figures/retirement_bars.png
+
+======================================================================
+Done. PNGs written to: /home/karthik/Programs/airesim/examples/retirement_figures
+  retirement_bars.png  (90 KB)
+  retirement_heatmaps.png  (94 KB)
+
+# finished: 2026-11-21T08:29:55.073154 exit=0

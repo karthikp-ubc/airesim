@@ -1,0 +1,118 @@
+# commit: 277f43c341125ccf88dc01de76ebd6aebb870e06
+# started: 2026-11-21T08:16:49.666168
+# command: python3 examples/scored_sweep.py
+
+AIReSim — ScoredRemoval Parameter Sweep
+======================================================================
+  working_pool_size : 4160  (headroom = 48)
+  job_length        : 7 days compute
+  systematic_mult   : 5.0×
+  bad_fraction      : 15%
+  auto_fail_prob    : 0.4
+  manual_fail_prob  : 0.2
+  replications      : 10
+  default policy    : {'initial_score': 100.0, 'failure_penalty': 30.0, 'success_increment': 10.0, 'time_period': 1440, 'retirement_threshold': 0.0}
+
+  Running NeverRemove baseline … time = 327.6 ± 4.8 h
+
+  Sweep: initial_score
+    25         … Δtime=+181.5h  retired=265.0  [depleted 100%]
+    50         … Δtime=+3.6h  retired=13.4
+    100        … Δtime=+0.0h  retired=0.0
+    200        … Δtime=+0.0h  retired=0.0
+    500        … Δtime=+0.0h  retired=0.0
+    1000       … Δtime=+0.0h  retired=0.0
+
+  Sweep: failure_penalty
+    5          … Δtime=+0.0h  retired=0.0
+    10         … Δtime=+0.0h  retired=0.0
+    20         … Δtime=+0.0h  retired=0.0
+    30         … Δtime=+0.0h  retired=0.0
+    50         … Δtime=+3.6h  retired=13.4
+    100        … Δtime=+181.5h  retired=265.0  [depleted 100%]
+
+  Sweep: success_increment
+    0          … Δtime=+0.0h  retired=0.0
+    5          … Δtime=+0.0h  retired=0.0
+    10         … Δtime=+0.0h  retired=0.0
+    20         … Δtime=+0.0h  retired=0.0
+    50         … Δtime=+0.0h  retired=0.0
+
+  Sweep: time_period
+    any        … Δtime=+0.0h  retired=0.0
+    6h         … Δtime=+0.0h  retired=0.0
+    1d         … Δtime=+0.0h  retired=0.0
+    7d         … Δtime=+0.0h  retired=0.0
+    28d        … Δtime=+0.0h  retired=0.0
+
+  Sweep: retirement_threshold
+    0          … Δtime=+0.0h  retired=0.0
+    10         … Δtime=+0.0h  retired=0.1
+    25         … Δtime=+0.0h  retired=0.1
+    50         … Δtime=+3.6h  retired=13.4
+    75         … Δtime=+181.5h  retired=265.0  [depleted 100%]
+
+======================================================================
+Summary (NeverRemove baseline: 327.6 ± 4.8 h)
+
+  ── initial_score ──
+    value           time (hrs)          Δ vs Never    retired     depleted
+    ----------------------------------------------------------------------
+    25                509.2 ± 74.5     +181.5h     265.0 ± 0.0  100%    
+    50                331.2 ±  9.0       +3.6h      13.4 ± 3.5          
+    100               327.6 ±  4.8       +0.0h       0.0 ± 0.0           ←default
+    200               327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    500               327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    1000              327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+
+  ── failure_penalty ──
+    value           time (hrs)          Δ vs Never    retired     depleted
+    ----------------------------------------------------------------------
+    5                 327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    10                327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    20                327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    30                327.6 ±  4.8       +0.0h       0.0 ± 0.0           ←default
+    50                331.2 ±  9.0       +3.6h      13.4 ± 3.5          
+    100               509.2 ± 74.5     +181.5h     265.0 ± 0.0  100%    
+
+  ── success_increment ──
+    value           time (hrs)          Δ vs Never    retired     depleted
+    ----------------------------------------------------------------------
+    0                 327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    5                 327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    10                327.6 ±  4.8       +0.0h       0.0 ± 0.0           ←default
+    20                327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    50                327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+
+  ── time_period ──
+    value           time (hrs)          Δ vs Never    retired     depleted
+    ----------------------------------------------------------------------
+    any               327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    6h                327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    1d                327.6 ±  4.8       +0.0h       0.0 ± 0.0           ←default
+    7d                327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+    28d               327.6 ±  4.8       +0.0h       0.0 ± 0.0          
+
+  ── retirement_threshold ──
+    value           time (hrs)          Δ vs Never    retired     depleted
+    ----------------------------------------------------------------------
+    0                 327.6 ±  4.8       +0.0h       0.0 ± 0.0           ←default
+    10                327.6 ±  4.8       +0.0h       0.1 ± 0.3          
+    25                327.6 ±  4.8       +0.0h       0.1 ± 0.3          
+    50                331.2 ±  9.0       +3.6h      13.4 ± 3.5          
+    75                509.2 ± 74.5     +181.5h     265.0 ± 0.0  100%    
+
+======================================================================
+Best single-parameter improvement over baseline:
+  No parameter setting outperformed NeverRemove without depletion.
+
+Saving plots …
+  Saved → /home/karthik/Programs/airesim/examples/scored_figures/scored_sweep_time.png
+  Saved → /home/karthik/Programs/airesim/examples/scored_figures/scored_sweep_retired.png
+
+======================================================================
+Done. PNGs written to: /home/karthik/Programs/airesim/examples/scored_figures
+  scored_sweep_retired.png  (112 KB)
+  scored_sweep_time.png  (128 KB)
+
+# finished: 2026-11-21T08:20:42.024609 exit=0

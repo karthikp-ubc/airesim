@@ -1,0 +1,199 @@
+# commit: 277f43c341125ccf88dc01de76ebd6aebb870e06
+# started: 2026-11-21T08:16:49.639499
+# command: python3 examples/stress_scenario.py
+
+AIReSim — Stress Scenario
+=================================================================
+Output directory: /home/karthik/Programs/airesim/examples/stress_figures
+
+=================================================================
+  Regime : 2x
+  failure: 0.0200 failures/day/server  (2880× default)
+  pool   : working=4128 (headroom=16), spare=50
+  reps   : 6 per configuration
+=================================================================
+
+  ── recovery_time = [5, 20, 40, 80]
+  recovery_time=5 ... mean=354.6 hrs
+  recovery_time=20 ... mean=480.6 hrs
+  recovery_time=40 ... mean=766.9 hrs
+  recovery_time=80 ... mean=1383.3 hrs
+
+======================================================================
+Sweep: OneWay(recovery_time)
+======================================================================
+  recovery_time=5                     training_time=   354.6± 14.6 hrs  failures= 931.2±31.7
+  recovery_time=20                    training_time=   480.6± 11.0 hrs  failures= 894.7±32.2
+  recovery_time=40                    training_time=   766.9± 26.4 hrs  failures= 884.7±38.9
+  recovery_time=80                    training_time=  1383.3± 25.2 hrs  failures= 911.3±18.9
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_2x_recovery_time.png
+
+  ── spare_pool_size = [10, 25, 50, 100]
+  spare_pool_size=10 ... mean=653.7 hrs
+  spare_pool_size=25 ... mean=544.1 hrs
+  spare_pool_size=50 ... mean=480.6 hrs
+  spare_pool_size=100 ... mean=483.5 hrs
+
+======================================================================
+Sweep: OneWay(spare_pool_size)
+======================================================================
+  spare_pool_size=10                    training_time=   653.7± 31.8 hrs  failures= 906.7±18.6
+  spare_pool_size=25                    training_time=   544.1± 12.6 hrs  failures= 921.8±28.4
+  spare_pool_size=50                    training_time=   480.6± 11.0 hrs  failures= 894.7±32.2
+  spare_pool_size=100                   training_time=   483.5± 10.8 hrs  failures= 903.2±29.6
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_2x_spare_pool_size.png
+
+  ── prob_auto_to_manual = [0.4, 0.6, 0.8, 0.95]
+  prob_auto_to_manual=0.4 ... mean=484.4 hrs
+  prob_auto_to_manual=0.6 ... mean=477.6 hrs
+  prob_auto_to_manual=0.8 ... mean=480.6 hrs
+  prob_auto_to_manual=0.95 ... mean=492.8 hrs
+
+======================================================================
+Sweep: OneWay(prob_auto_to_manual)
+======================================================================
+  prob_auto_to_manual=0.4                   training_time=   484.4±  5.0 hrs  failures= 929.8±14.0
+  prob_auto_to_manual=0.6                   training_time=   477.6± 10.4 hrs  failures= 898.5±32.8
+  prob_auto_to_manual=0.8                   training_time=   480.6± 11.0 hrs  failures= 894.7±32.2
+  prob_auto_to_manual=0.95                  training_time=   492.8± 10.7 hrs  failures= 920.0±27.4
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_2x_prob_auto_to_manual.png
+
+  ── warm_standbys = [4, 8, 16, 32]
+  warm_standbys=4 ... mean=498.0 hrs
+  warm_standbys=8 ... mean=492.2 hrs
+  warm_standbys=16 ... mean=480.6 hrs
+  warm_standbys=32 ... mean=491.0 hrs
+
+======================================================================
+Sweep: OneWay(warm_standbys)
+======================================================================
+  warm_standbys=4                     training_time=   498.0±  5.9 hrs  failures= 915.0±15.7
+  warm_standbys=8                     training_time=   492.2± 11.0 hrs  failures= 921.3±28.2
+  warm_standbys=16                    training_time=   480.6± 11.0 hrs  failures= 894.7±32.2
+  warm_standbys=32                    training_time=   491.0±  8.4 hrs  failures= 918.5±25.4
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_2x_warm_standbys.png
+
+Sensitivity ranking (2x):
+
+Parameter                                  Min        Max      Range   Impact
+------------------------------------------------------------------------------
+recovery_time                            354.6     1383.3     1028.7     high
+spare_pool_size                          480.6      653.7      173.1     high
+warm_standbys                            480.6      498.0       17.4      low
+prob_auto_to_manual                      477.6      492.9       15.2      low
+
+  Computing baseline (6 reps)…
+  Baseline training time: 480.6 ± 11.0 hrs
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_2x_tornado.png
+
+=================================================================
+  Regime : 5x
+  failure: 0.0500 failures/day/server  (7200× default)
+  pool   : working=4128 (headroom=16), spare=50
+  reps   : 6 per configuration
+=================================================================
+
+  ── recovery_time = [5, 20, 40, 80]
+  recovery_time=5 ... mean=767.5 hrs
+  recovery_time=20 ... mean=883.0 hrs
+  recovery_time=40 ... mean=1534.8 hrs
+  recovery_time=80 ... mean=2882.6 hrs
+
+======================================================================
+Sweep: OneWay(recovery_time)
+======================================================================
+  recovery_time=5                     training_time=   767.5± 19.5 hrs  failures=2020.5±42.3
+  recovery_time=20                    training_time=   883.0± 10.4 hrs  failures=2017.7±33.4
+  recovery_time=40                    training_time=  1534.8± 22.0 hrs  failures=2034.3±33.1
+  recovery_time=80                    training_time=  2882.6± 46.0 hrs  failures=2032.3±34.4
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_5x_recovery_time.png
+
+  ── spare_pool_size = [10, 25, 50, 100]
+  spare_pool_size=10 ... mean=1518.8 hrs
+  spare_pool_size=25 ... mean=1155.3 hrs
+  spare_pool_size=50 ... mean=883.0 hrs
+  spare_pool_size=100 ... mean=881.7 hrs
+
+======================================================================
+Sweep: OneWay(spare_pool_size)
+======================================================================
+  spare_pool_size=10                    training_time=  1518.8± 49.3 hrs  failures=2017.3±47.1
+  spare_pool_size=25                    training_time=  1155.3± 49.7 hrs  failures=2042.7±18.9
+  spare_pool_size=50                    training_time=   883.0± 10.4 hrs  failures=2017.7±33.4
+  spare_pool_size=100                   training_time=   881.7± 16.9 hrs  failures=2071.2±47.2
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_5x_spare_pool_size.png
+
+  ── prob_auto_to_manual = [0.4, 0.6, 0.8, 0.95]
+  prob_auto_to_manual=0.4 ... mean=864.6 hrs
+  prob_auto_to_manual=0.6 ... mean=869.8 hrs
+  prob_auto_to_manual=0.8 ... mean=883.0 hrs
+  prob_auto_to_manual=0.95 ... mean=966.4 hrs
+
+======================================================================
+Sweep: OneWay(prob_auto_to_manual)
+======================================================================
+  prob_auto_to_manual=0.4                   training_time=   864.6± 16.0 hrs  failures=2062.8±46.7
+  prob_auto_to_manual=0.6                   training_time=   869.8±  8.1 hrs  failures=2054.7±23.9
+  prob_auto_to_manual=0.8                   training_time=   883.0± 10.4 hrs  failures=2017.7±33.4
+  prob_auto_to_manual=0.95                  training_time=   966.4± 19.3 hrs  failures=2024.3±41.9
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_5x_prob_auto_to_manual.png
+
+  ── warm_standbys = [4, 8, 16, 32]
+  warm_standbys=4 ... mean=905.7 hrs
+  warm_standbys=8 ... mean=898.5 hrs
+  warm_standbys=16 ... mean=883.0 hrs
+  warm_standbys=32 ... mean=875.1 hrs
+
+======================================================================
+Sweep: OneWay(warm_standbys)
+======================================================================
+  warm_standbys=4                     training_time=   905.7± 19.4 hrs  failures=2029.3±38.9
+  warm_standbys=8                     training_time=   898.5± 24.6 hrs  failures=2042.5±44.3
+  warm_standbys=16                    training_time=   883.0± 10.4 hrs  failures=2017.7±33.4
+  warm_standbys=32                    training_time=   875.1±  4.6 hrs  failures=2030.8±19.3
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_5x_warm_standbys.png
+
+Sensitivity ranking (5x):
+
+Parameter                                  Min        Max      Range   Impact
+------------------------------------------------------------------------------
+recovery_time                            767.5     2882.6     2115.2     high
+spare_pool_size                          881.7     1518.8      637.2     high
+prob_auto_to_manual                      864.6      966.4      101.7   medium
+warm_standbys                            875.0      905.7       30.6      low
+
+  Computing baseline (6 reps)…
+  Baseline training time: 883.0 ± 10.4 hrs
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_5x_tornado.png
+
+
+=================================================================
+Cross-regime comparison
+=================================================================
+
+  Baseline training time: 2× = 480.6 hrs, 5× = 883.0 hrs
+
+  Sensitivity ranges:
+  Parameter                     2× range     5× range  amplification
+  ------------------------------------------------------------------
+  recovery_time                  1028.7h      2115.2h           2.1×
+  spare_pool_size                 173.1h       637.2h           3.7×
+  prob_auto_to_manual              15.2h       101.7h           6.7×
+  warm_standbys                    17.4h        30.6h           1.8×
+  Saved plot to /home/karthik/Programs/airesim/examples/stress_figures/stress_comparison.png
+
+=================================================================
+Done. PNGs written to: /home/karthik/Programs/airesim/examples/stress_figures
+  stress_2x_prob_auto_to_manual.png  (36 KB)
+  stress_2x_recovery_time.png  (41 KB)
+  stress_2x_spare_pool_size.png  (39 KB)
+  stress_2x_tornado.png  (48 KB)
+  stress_2x_warm_standbys.png  (38 KB)
+  stress_5x_prob_auto_to_manual.png  (38 KB)
+  stress_5x_recovery_time.png  (41 KB)
+  stress_5x_spare_pool_size.png  (42 KB)
+  stress_5x_tornado.png  (48 KB)
+  stress_5x_warm_standbys.png  (37 KB)
+  stress_comparison.png  (76 KB)
+
+# finished: 2026-11-21T08:27:31.391327 exit=0
