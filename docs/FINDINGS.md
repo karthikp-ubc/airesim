@@ -32,7 +32,8 @@ servers, the job stalls until a repair returns one, and that wait is not in the 
 In `examples/stress_scenario.py` (16 servers of headroom, 10 spares, 5× failure rate)
 stall waiting is up to 41% of training time, and spare-pool size becomes one of the two
 largest levers. Waiting for servers can dominate a capacity-constrained cluster; the
-Table I configuration simply has enough capacity that it never happens.
+Table I configuration simply has enough capacity that it never happens
+(`CAPACITY_STRESS_REPORT.md`).
 
 ## 2. At Table I defaults
 
@@ -126,6 +127,7 @@ severity, repair quality, and job lengths in this range is outside this repo's s
 | `SIMULATION_REPORT.md` | `config.yaml` (Table I) | 256 days |
 | `DIAGNOSIS_REALISTIC_REPORT.md` | `config.yaml`, sweeping `diagnosis_probability`/`diagnosis_uncertainty`/multiplier | 256 days |
 | `RETIREMENT_POLICY_REPORT.md`, `SCHEDULING_COMPARISON_REPORT.md`, `2D-HEAT_MAP_REPORT.md`, `THRESHOLD_SENSITIVITY_REPORT.md`, `DIAGNOSIS_SWEEP_REPORT.md` | Payoff regime (`working_pool_size=4,600`, `systematic_failure_rate_multiplier` 5–30×, `manual_repair_fail_prob` 0.20–0.90, one script's `BASE` per report — see each script) | 14 days |
+| `CAPACITY_STRESS_REPORT.md` | Tight capacity: `working_pool_size=4,128` (16 headroom), spare pool 10–200, Table I-like failure model at 2–5× random failure rate | 7–14 days |
 | `POLICY_SYNTHESIS_REPORT.md` | Synthesizes all of the above | — |
 
 **This repo's defaults (`config.yaml`) implement the paper's Table I.** The DSN'26 paper's

@@ -130,6 +130,7 @@ docs/
 ├── 2D-HEAT_MAP_REPORT.md       # Two-way heatmap sweep results, payoff regime
 ├── THRESHOLD_SENSITIVITY_REPORT.md  # ThresholdRemoval crossover analysis
 ├── DIAGNOSIS_SWEEP_REPORT.md   # Diagnosis quality × scheduling/retirement, payoff regime (+ crossover, §6)
+├── CAPACITY_STRESS_REPORT.md   # Tight working/spare pools: stalls, spare-pool size, retirement with little headroom
 └── POLICY_SYNTHESIS_REPORT.md  # Synthesis of all reports above + deployment recommendations
 
 config.yaml                     # Ready-to-use params file (Table I defaults + adaptive settings)

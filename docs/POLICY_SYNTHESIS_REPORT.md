@@ -7,7 +7,7 @@ servers of working-pool headroom) swept over failure severity, repair quality, b
 fraction, scheduling and diagnosis quality (`RETIREMENT_POLICY_REPORT.md`,
 `SCHEDULING_COMPARISON_REPORT.md`, `2D-HEAT_MAP_REPORT.md`,
 `THRESHOLD_SENSITIVITY_REPORT.md`, `DIAGNOSIS_SWEEP_REPORT.md` including its §6
-crossover sweep). Repairs follow the DSN'26 model: escalation is independent of silent
+crossover sweep), plus tight-capacity configurations (`CAPACITY_STRESS_REPORT.md`). Repairs follow the DSN'26 model: escalation is independent of silent
 auto-repair failure. Retirement and scheduling were compared only in the payoff regime; at
 the paper defaults only scheduling, diagnosis and the job-length sweep
 (`SIMULATION_REPORT.md` §5a) were studied.
@@ -143,6 +143,15 @@ payoff-regime cells, diagnosis probability 0.5–1.0, with `FewestAttributedFail
 - Ground-truth failure attribution is worth 43–103 h on top of that at diagnosis 0.8 and
   107–223 h at 0.5.
 
+**13. When capacity is tight, waiting for servers can dominate.**
+(`CAPACITY_STRESS_REPORT.md`.) With 16 servers of headroom and a 10-server spare pool at a
+5× failure rate, the job stalls ~1,000 times per run and spends 42% of its training time
+waiting for repaired servers; spare-pool size becomes the second-largest lever after
+recovery time. Levers then interact through capacity: cutting recovery time from 20 to 5
+minutes saves 115 h instead of the ~504 h of reload time it removes, because the job now
+stalls 49% of the time, and retirement policies that pay off with 488 servers of headroom
+cost 41–106 h with 16.
+
 ---
 
 ## Recommendations
@@ -155,7 +164,7 @@ payoff-regime cells, diagnosis probability 0.5–1.0, with `FewestAttributedFail
 | Multiplier ≲5× and repair-fail ≲20% | `NeverRemove` | Neither retirement policy has a measurable effect (finding 3) |
 | Bad-server fraction ≥ 12% | `ThresholdRemoval(≥2/7d)` or `ScoredRemoval` | `≥2/7d` saves 127–137 h there; `ScoredRemoval` untested on this axis but stronger everywhere it was tested |
 | Diagnosis uncertainty may reach 1.0 | Scheduling alone; no `ScoredRemoval` | `ScoredRemoval` harmful at 1.0 (finding 10) |
-| Tight working-pool headroom | `NeverRemove` or `ThresholdRemoval` | `ScoredRemoval` retires 225–390 servers, more than the 200-server spare pool; failure-aware scheduling itself needs headroom to work (finding 4); untested with tight headroom |
+| Tight working-pool headroom | `NeverRemove`; size the spare pool to avoid stalls | With 16 servers of headroom, `ThresholdRemoval(≥2/7d)` costs 41–106 h and no `ScoredRemoval` setting helps; stall waiting, not failures, can then dominate (finding 13) |
 | Choosing a threshold | `≥2/7d`, never `≥3/7d` or `≥1/7d` | `≥3/7d` does nothing; `≥1/7d` depletes the cluster |
 
 **Bottom line:** in the payoff regime, run failure-aware scheduling *and* `ScoredRemoval`:
@@ -168,4 +177,4 @@ costs about 0.4% at uncertainty 0.2.
 
 ---
 
-*Synthesized from the reports listed above. 2026-11-20.*
+*Synthesized from the reports listed above. 2026-11-20; finding 13 added 2026-11-21.*

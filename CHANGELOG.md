@@ -129,7 +129,8 @@ completing a repair resets it. Exponential runs are unaffected (memoryless).
   is up to 41% of training time — time that is not in the accounting identity in
   FINDINGS.md §1. Spare-pool size remains a high-impact parameter there, with a smaller
   range (5×: 858–1,834 h at diagnosis 1.0, was 862–2,253 h). The diagnosis default then
-  lowers times further in the tightest cells (fewer servers away in repair).
+  lowers times further in the tightest cells (fewer servers away in repair). Written up
+  in the new docs/CAPACITY_STRESS_REPORT.md, together with the two reruns below.
 - **Other reruns (2026-11-21):** `retirement_sweep.py` (16 servers of headroom):
   conclusions unchanged, `Thresh ≥2/7d` still costs 40–110 h against never retiring;
   code-fix differences are within noise. `scored_sweep.py`: identical except the one
