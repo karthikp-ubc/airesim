@@ -6,6 +6,11 @@ high-failure cells of the 2-D heat map; at the Table I default of 0.8 FewestFail
 wins most cells.  This script sweeps diagnosis_probability in three regimes where
 retirement wins at 1.0 and locates the crossover with paired (same-seed) contrasts.
 
+FewestFailuresFirst ranks by ground-truth failure counts, including failures that went
+undiagnosed, while removal policies only hear about diagnosed failures.  The fair
+comparison is therefore against FewestAttributedFailuresFirst (diagnosed failures only);
+both are included, so the gap between them is the value of information diagnosis misses.
+
 Setup: the 2-D heat-map "payoff regime" (examples/2d_heatmap_sweep.py: working pool 4600,
 14-day job, 2x random failure rate, 8% bad servers, 60-min recovery, auto-repair fail 0.6),
 diagnosis_uncertainty = 0.  Replication r uses seed 42 + r for every cell and policy.
@@ -13,7 +18,7 @@ diagnosis_uncertainty = 0.  Replication r uses seed 42 + r for every cell and po
 Outputs (examples/diagnosis_crossover_figures/):
   replications.csv   one row per run
   results.csv        per (regime, diagnosis, policy) mean / stdev / 95% CI
-  contrasts.csv      paired contrasts vs FewestFailuresFirst+NeverRemove and vs baseline
+  contrasts.csv      paired contrasts vs FAFF+NeverRemove, FFF+NeverRemove and baseline
   crossover.csv      interpolated crossover diagnosis_probability per regime and contrast
   crossover.png      training time and paired contrast vs diagnosis_probability
   crossover_report.md
@@ -48,6 +53,7 @@ from airesim.params import Params  # noqa: E402
 from airesim.policies import NeverRemove, ScoredRemoval, ThresholdRemoval  # noqa: E402
 from airesim.scheduling_policies import (  # noqa: E402
     DefaultHostSelection,
+    FewestAttributedFailuresFirst,
     FewestFailuresFirst,
 )
 
@@ -86,9 +92,13 @@ POLICIES = {
     "FewestFailuresFirst+NeverRemove": lambda: (FewestFailuresFirst(), NeverRemove()),
     "FewestFailuresFirst+ScoredRemoval(SC_fast)": lambda: (FewestFailuresFirst(),
                                                            ScoredRemoval(**SC_FAST)),
+    "FAFF+NeverRemove": lambda: (FewestAttributedFailuresFirst(), NeverRemove()),
+    "FAFF+ScoredRemoval(SC_fast)": lambda: (FewestAttributedFailuresFirst(),
+                                            ScoredRemoval(**SC_FAST)),
 }
 BASELINE = "Random+NeverRemove"
 SCHED = "FewestFailuresFirst+NeverRemove"
+FAIR = "FAFF+NeverRemove"  # realistic-information scheduler
 RETIRE = "Random+ScoredRemoval(SC_fast)"
 
 METRICS = ["training_time_hrs", "total_failures", "systematic_failures", "servers_retired",
@@ -150,7 +160,7 @@ def analyse(rows: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
     contrasts = []
     for mult, fail in REGIMES:
         for diag in DIAGNOSIS:
-            for ref in (SCHED, BASELINE):
+            for ref in (FAIR, SCHED, BASELINE):
                 base = by.get((mult, fail, diag, ref), {})
                 for pol in POLICIES:
                     if pol == ref:
@@ -168,8 +178,10 @@ def analyse(rows: list[dict]) -> tuple[list[dict], list[dict], list[dict]]:
 
     crossovers = []
     for mult, fail in REGIMES:
-        for pol, ref in [(RETIRE, SCHED), ("FewestFailuresFirst+ScoredRemoval(SC_fast)", SCHED),
-                         ("Random+Thresh>=2/7d", SCHED), (RETIRE, BASELINE)]:
+        for pol, ref in [(RETIRE, FAIR), ("Random+Thresh>=2/7d", FAIR),
+                         ("FAFF+ScoredRemoval(SC_fast)", FAIR), (RETIRE, SCHED),
+                         ("FewestFailuresFirst+ScoredRemoval(SC_fast)", SCHED),
+                         (SCHED, FAIR), (RETIRE, BASELINE), (FAIR, BASELINE)]:
             pts = sorted((c["diagnosis_probability"], c["delta_hrs"], c["lo"], c["hi"])
                          for c in contrasts if c["multiplier"] == mult
                          and c["manual_repair_fail_prob"] == fail
@@ -228,7 +240,8 @@ def plot(results: list[dict], contrasts: list[dict], path: str) -> None:
     fig, axes = plt.subplots(2, len(REGIMES), figsize=(5 * len(REGIMES), 8), sharex=True,
                              squeeze=False)
     colors = {"Random+NeverRemove": "#888888", RETIRE: "#C44E52",
-              "Random+Thresh>=2/7d": "#DD8452", SCHED: "#4C72B0",
+              "Random+Thresh>=2/7d": "#DD8452", SCHED: "#4C72B0", FAIR: "#8172B3",
+              "FAFF+ScoredRemoval(SC_fast)": "#937860",
               "FewestFailuresFirst+ScoredRemoval(SC_fast)": "#55A868"}
     for j, (mult, fail) in enumerate(REGIMES):
         ax = axes[0][j]
@@ -248,14 +261,14 @@ def plot(results: list[dict], contrasts: list[dict], path: str) -> None:
             pts = sorted((c["diagnosis_probability"], c["delta_hrs"], c["lo"], c["hi"])
                          for c in contrasts if c["multiplier"] == mult
                          and c["manual_repair_fail_prob"] == fail and c["policy"] == pol
-                         and c["reference"] == SCHED)
+                         and c["reference"] == FAIR)
             if pts:
                 xs, ys, lo, hi = zip(*pts)
                 ax.plot(xs, ys, marker="o", ms=3, color=colors[pol])
                 ax.fill_between(xs, lo, hi, color=colors[pol], alpha=0.15)
         ax.axhline(0, color="black", lw=0.8)
         ax.set_xlabel("diagnosis_probability")
-        ax.set_ylabel("Δ vs FewestFailuresFirst+NeverRemove (hours)\nnegative = faster")
+        ax.set_ylabel("Δ vs FAFF+NeverRemove (hours)\nnegative = faster")
         ax.grid(alpha=0.3)
     axes[0][0].legend(fontsize=7)
     fig.tight_layout()
@@ -282,23 +295,24 @@ def report(results: list[dict], contrasts: list[dict], crossovers: list[dict],
              "paired by seed; negative = policy faster. ± is the 95% CI.", ""]
     for mult, fail in REGIMES:
         lines += [f"## Multiplier {mult:g}×, manual repair fail {fail:.0%}", "",
-                  "| diagnosis | " + " | ".join(p for p in POLICIES if p != SCHED)
+                  "| diagnosis | " + " | ".join(p for p in POLICIES if p != FAIR)
                   + " | retired (Random+Scored) |", "|---" * len(POLICIES) + "|---|"]
         for diag in DIAGNOSIS:
             cells = []
             for pol in POLICIES:
-                if pol == SCHED:
+                if pol == FAIR:
                     continue
                 c = next((c for c in contrasts if c["multiplier"] == mult
                           and c["manual_repair_fail_prob"] == fail
                           and c["diagnosis_probability"] == diag and c["policy"] == pol
-                          and c["reference"] == SCHED), None)
+                          and c["reference"] == FAIR), None)
                 cells.append("—" if c is None else f"{c['delta_hrs']:+.0f} ± {c['ci95_hrs']:.0f}")
             ret = next((r["mean_servers_retired"] for r in results if r["multiplier"] == mult
                         and r["manual_repair_fail_prob"] == fail
                         and r["diagnosis_probability"] == diag and r["policy"] == RETIRE), 0)
             lines.append(f"| {diag:g} | " + " | ".join(cells) + f" | {ret:.0f} |")
-        lines += ["", "Reference: FewestFailuresFirst+NeverRemove.", ""]
+        lines += ["", "Reference: FAFF+NeverRemove (FewestAttributedFailuresFirst, which "
+                  "sees only diagnosed failures, like the removal policies).", ""]
     lines += ["## Crossovers", "",
               "`crossover` is where the mean contrast changes sign scanning down from 1.0 "
               "(linear interpolation); `clearly better from` is the lowest diagnosis value "
